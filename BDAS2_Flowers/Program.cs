@@ -1,20 +1,28 @@
+using Oracle.ManagedDataAccess.Client;   // <— драйвер Oracle
+using BDAS2_Flowers.Data;               // <— IDbFactory / OracleDbFactory
+
 var builder = WebApplication.CreateBuilder(args);
 
-var testCs = builder.Configuration.GetConnectionString("Oracle");
-if (string.IsNullOrWhiteSpace(testCs))
+// 1) Читаем строку подключения и валидируем
+var oracleCs = builder.Configuration.GetConnectionString("Oracle");
+if (string.IsNullOrWhiteSpace(oracleCs))
     throw new InvalidOperationException("ConnectionStrings:Oracle se nenasel. Uprav User Secrets.");
 
-// Add services to the container.
+// 2) MVC
 builder.Services.AddControllersWithViews();
-builder.Services.AddScoped<BDAS2_Flowers.Data.IDbFactory, BDAS2_Flowers.Data.OracleDbFactory>();
+
+// 3) DI: кладём построитель строки подключения (удобно для логов/Health и фабрик)
+builder.Services.AddSingleton(new OracleConnectionStringBuilder(oracleCs));
+
+// 4) Твоя фабрика подключения
+builder.Services.AddScoped<IDbFactory, OracleDbFactory>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ------ Pipeline ------
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
