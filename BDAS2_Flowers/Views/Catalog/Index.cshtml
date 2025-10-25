@@ -1,0 +1,64 @@
+﻿@model IEnumerable<BDAS2_Flowers.Models.ViewModels.ProductCardVm>
+@{
+    ViewData["Title"] = "E-shop";
+    var p = (int)(ViewBag.Page ?? 1);
+    var hasNext = (bool)(ViewBag.HasNext ?? false);
+    var categories = (List<(int Id, string Name)>)ViewBag.Categories ?? new();
+    int? selectedTypeId = (int?)ViewBag.SelectedTypeId;
+}
+<div class="hero mb-4">
+    <div class="flex-fill">
+        <div class="badge text-success bg-white border rounded-pill px-3 py-2"><i class="bi bi-truck"></i> Rozvoz po Ceske Republice</div>
+        <h1 class="display-5 mb-1">E-shop</h1>
+        <div class="text-muted">Každý produkt je jedinečný.</div>
+    </div>
+    <img class="rounded-4 d-none d-md-block" style="width:46%;height:260px;object-fit:cover"
+         src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=1200" />
+</div>
+
+<div class="steps">
+    <div class="step"><div class="ico bi bi-flower1"></div><div>Výběr kytice</div></div>
+    <div class="step"><div class="ico bi bi-truck"></div><div>Doručení/vyzvednutí</div></div>
+    <div class="step"><div class="ico bi bi-calendar2-week"></div><div>Termín</div></div>
+    <div class="step"><div class="ico bi bi-wallet2"></div><div>Platba</div></div>
+    <div class="step"><div class="ico bi bi-hand-thumbs-up"></div><div>Připraveno</div></div>
+</div>
+
+<form method="get" class="filterbar">
+    <div class="input-group" style="max-width: 320px;">
+        <label class="input-group-text" for="typeId">Kategorie</label>
+        <select id="typeId" name="typeId" class="form-select">
+            <option value="">Všechny</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c.Id" selected="@(selectedTypeId==c.Id ? "selected" : null)">
+                    @c.Name
+                </option>
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-brand ms-auto">Filtrovat</button>
+</form>
+
+
+<div class="row g-4">
+    @foreach (var x in Model)
+    {
+        <div class="col-12 col-sm-6 col-lg-3">
+            @await Html.PartialAsync("_ProductCard", x)
+        </div>
+    }
+</div>
+
+<nav class="d-flex justify-content-center my-4">
+    <ul class="pagination">
+        <li class="page-item @(p <= 1 ? "disabled" : "")">
+            <a class="page-link" href="@Url.Action("Index", new { page = p - 1, typeId = selectedTypeId })">&laquo;</a>
+        </li>
+        <li class="page-item active"><span class="page-link">@p</span></li>
+        <li class="page-item @(hasNext ? "" : "disabled")">
+            <a class="page-link" href="@Url.Action("Index", new { page = p + 1, typeId = selectedTypeId })">&raquo;</a>
+        </li>
+    </ul>
+</nav>
+

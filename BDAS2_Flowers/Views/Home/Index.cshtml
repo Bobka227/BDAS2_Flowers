@@ -1,8 +1,51 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model IEnumerable<BDAS2_Flowers.Models.ViewModels.ProductCardVm>
+@{
+    ViewData["Title"] = "Domů";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="hero mb-5">
+    <div class="flex-fill">
+        <span class="badge text-success bg-white border rounded-pill px-3 py-2">
+            <i class="bi bi-truck"></i> Rozvoz po Brně a Olomouci
+        </span>
+        <h1 class="display-4 fw-bold mt-2">Darujte jedinečný zážitek</h1>
+        <p class="text-muted fs-5">U nás nemusíte vybírat ze stovek druhů květin – připravíme originální kytici na míru.</p>
+        <a class="btn btn-brand btn-lg mt-2" asp-controller="Catalog" asp-action="Index">E-shop</a>
+    </div>
+    <img class="rounded-4 d-none d-md-block" style="width:46%;height:320px;object-fit:cover"
+         src="https://images.unsplash.com/photo-1491002052546-bf38f186af7c?q=80&w=1200" alt="Flowers">
+</section>
+
+<div class="steps mb-4">
+    <div class="step"><div class="ico bi bi-flower1"></div><div>Výběr kytice</div></div>
+    <div class="step"><div class="ico bi bi-truck"></div><div>Doručení/vyzvednutí</div></div>
+    <div class="step"><div class="ico bi bi-calendar2-week"></div><div>Termín</div></div>
+    <div class="step"><div class="ico bi bi-wallet2"></div><div>Platba</div></div>
+    <div class="step"><div class="ico bi bi-hand-thumbs-up"></div><div>Připraveno</div></div>
 </div>
+
+<!-- FEATURED -->
+<section class="my-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="h4 m-0">Vybráno pro vás</h2>
+        <a class="link-success" asp-controller="Catalog" asp-action="Index">Zobrazit vše</a>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var p in Model)
+        {
+            <div class="col-12 col-sm-6 col-lg-3">
+                @await Html.PartialAsync("_ProductCard", p)
+            </div>
+        }
+    </div>
+</section>
+
+<section class="my-5">
+    <div class="p-4 rounded-4" style="background:#f2f8f6">
+        <h3>Proč KYTKY</h3>
+        <p class="text-muted mb-0">
+            Nabízíme kytice v lučním i luxusním stylu. Klade­me důraz na čerstvost, kvalitu a rychlé doručení.
+        </p>
+    </div>
+</section>
