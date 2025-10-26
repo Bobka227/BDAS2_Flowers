@@ -1,0 +1,7 @@
+﻿@{
+    ViewData["Title"] = "Event detail";
+    var name = (string)ViewBag.EventName;
+}
+<h2 class="mb-3">@name</h2>
+<p class="text-muted">Připravíme návrh aranžmá na míru (rozpočet, barvy, doručení a instalace).</p>
+<a class="btn btn-brand" asp-controller="Catalog" asp-action="Index">Vybrat kytice</a>
