@@ -7,7 +7,7 @@ namespace BDAS2_Flowers.Controllers
     public class DiagnosticsController : Controller
     {
         private readonly OracleConnectionStringBuilder _csb;
-
+        // ляляляляляляллялля
         public DiagnosticsController(OracleConnectionStringBuilder csb) => _csb = csb;
 
         [HttpGet("/diag")]
