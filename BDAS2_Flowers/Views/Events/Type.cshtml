@@ -1,0 +1,14 @@
+﻿@model BDAS2_Flowers.Controllers.EventTypeViewModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+<div class="container py-4">
+  <h1 class="mb-3">@Model.Name</h1>
+  <p class="lead">@Model.Description</p>
+
+  <form asp-controller="Orders" asp-action="CreateForEvent" method="get" class="d-flex gap-2">
+    <input type="hidden" name="eventTypeId" value="@Model.EventTypeId" />
+    <button class="btn btn-primary btn-lg">Objednat organizaci</button>
+    <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Zpět</a>
+  </form>
+</div>

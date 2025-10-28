@@ -1,0 +1,12 @@
+﻿@model IReadOnlyList<BDAS2_Flowers.Models.Domain.EventType>
+
+<ul class="dropdown-menu events-menu p-2 shadow-lg" aria-labelledby="eventsDropdown">
+    @foreach (var t in Model)
+    {
+        <li>
+            <a class="dropdown-item" asp-controller="Events" asp-action="Type" asp-route-id="@t.EventTypeId">
+                @t.EventName
+            </a>
+        </li>
+    }
+</ul>

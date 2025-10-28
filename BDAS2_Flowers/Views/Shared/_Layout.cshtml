@@ -22,9 +22,17 @@
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link active" asp-controller="Catalog" asp-action="Index"><i class="bi bi-house-door"></i> E-shop</a></li>
-                    <li class="nav-item">
-                        <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Events") ? "active" : "")"
-                           asp-controller="Events" asp-action="Index">Events</a>
+                    <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle"
+                         href="#"
+                         id="eventsDropdown"
+                         role="button"
+                         data-bs-toggle="dropdown"
+                         data-bs-auto-close="outside"
+                         aria-expanded="false">
+                        Události
+                      </a>
+                                            @await Component.InvokeAsync("EventsMenu", new { onlyUsed = false })
                     </li>
                     <li class="nav-item"><a class="nav-link" href="#">Reference</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Kontakt</a></li>
@@ -66,6 +74,17 @@
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const mq = window.matchMedia('(min-width: 992px)');
+          document.querySelectorAll('.navbar .dropdown').forEach(function (dd) {
+            const toggle = dd.querySelector('[data-bs-toggle="dropdown"]');
+            if (!toggle) return;
+            const api = bootstrap.Dropdown.getOrCreateInstance(toggle, { autoClose: true });
+            dd.addEventListener('mouseenter', () => mq.matches && api.show());
+            dd.addEventListener('mouseleave', () => mq.matches && api.hide());
+          });
+    </script>
     @RenderSection("Scripts", required: false)
 </body>
 </html>
