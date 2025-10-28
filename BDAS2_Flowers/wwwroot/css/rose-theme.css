@@ -71,7 +71,7 @@ body {
     }
 
 .filterbar {
-    background: linear-gradient(90deg, var(--brand), var(--brand-100));
+    background: #fff;
     border-radius: 16px;
     box-shadow: var(--shadow);
     padding: 16px;

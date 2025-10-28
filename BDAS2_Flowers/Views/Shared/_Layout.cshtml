@@ -38,7 +38,24 @@
                     <li class="nav-item"><a class="nav-link" href="#">Kontakt</a></li>
                 </ul>
                 <div class="d-flex gap-2">
-                    <a class="btn btn-brand"><i class="bi bi-person"></i> Můj účet</a>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                            <a class="btn btn-outline-secondary" asp-controller="Admin" asp-action="Index">
+                                <i class="bi bi-speedometer2"></i> Admin
+                            </a>
+                                    }
+                                    @if (User.Identity?.IsAuthenticated == true)
+                                    {
+                            <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                <button class="btn btn-brand"><i class="bi bi-person"></i> @User.Identity.Name</button>
+                            </form>
+                                    }
+                                    else
+                                    {
+                            <a class="btn btn-brand" asp-controller="Auth" asp-action="Login"><i class="bi bi-person"></i> Přihlásit</a>
+                            <a class="btn btn-outline-secondary" asp-controller="Auth" asp-action="Register">Registrovat</a>
+                                    }
                     <a class="btn btn-outline-secondary"><i class="bi bi-bag"></i></a>
                 </div>
             </div>
