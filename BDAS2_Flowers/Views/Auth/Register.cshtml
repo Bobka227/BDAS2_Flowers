@@ -1,0 +1,42 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.RegisterVm
+@{
+    ViewData["Title"] = "Registrace";
+}
+<div class="container" style="max-width:560px">
+  <h1 class="h3 mb-3">Vytvořit účet</h1>
+  <form method="post">
+        @Html.AntiForgeryToken()
+    <div class="mb-3">
+      <label class="form-label">E-mail</label>
+      <input asp-for="Email" class="form-control" />
+      <span class="text-danger" asp-validation-for="Email"></span>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Heslo</label>
+      <input asp-for="Password" type="password" class="form-control" />
+      <span class="text-danger" asp-validation-for="Password"></span>
+    </div>
+    <div class="row g-3">
+      <div class="col">
+        <label class="form-label">Jméno</label>
+        <input asp-for="FirstName" class="form-control" />
+        <span class="text-danger" asp-validation-for="FirstName"></span>
+      </div>
+      <div class="col">
+        <label class="form-label">Příjmení</label>
+        <input asp-for="LastName" class="form-control" />
+        <span class="text-danger" asp-validation-for="LastName"></span>
+      </div>
+    </div>
+    <div class="mb-3 mt-3">
+      <label class="form-label">Telefon</label>
+      <input asp-for="Phone" class="form-control" />
+      <span class="text-danger" asp-validation-for="Phone"></span>
+    </div>
+    <button class="btn btn-brand">Vytvořit účet</button>
+    <a asp-action="Login" class="btn link-brand">Mám účet</a>
+  </form>
+</div>
+@section Scripts {
+ <partial name="_ValidationScriptsPartial" />
+ }
