@@ -44,18 +44,38 @@
                                 <i class="bi bi-speedometer2"></i> Admin
                             </a>
                                     }
-                                    @if (User.Identity?.IsAuthenticated == true)
-                                    {
-                            <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                <button class="btn btn-brand"><i class="bi bi-person"></i> @User.Identity.Name</button>
-                            </form>
-                                    }
-                                    else
-                                    {
-                            <a class="btn btn-brand" asp-controller="Auth" asp-action="Login"><i class="bi bi-person"></i> Přihlásit</a>
-                            <a class="btn btn-outline-secondary" asp-controller="Auth" asp-action="Register">Registrovat</a>
-                                    }
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-brand rounded-pill dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-person"></i> @User.Identity!.Name
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
+                                        <i class="bi bi-person-badge"></i> Můj profil
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li>
+                                    <form asp-controller="Auth" asp-action="Logout" method="post" class="px-3 m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-link p-0 text-danger">
+                                            <i class="bi bi-box-arrow-right"></i> Odhlásit se
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-brand" asp-controller="Auth" asp-action="Login">
+                            <i class="bi bi-person"></i> Přihlásit
+                        </a>
+                        <a class="btn btn-outline-secondary" asp-controller="Auth" asp-action="Register">Registrovat</a>
+                    }
+
                     <a class="btn btn-outline-secondary"><i class="bi bi-bag"></i></a>
                 </div>
             </div>
