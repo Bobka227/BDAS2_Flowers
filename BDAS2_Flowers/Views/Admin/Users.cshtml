@@ -1,0 +1,41 @@
+﻿@model List<(int Id,string Email,string Name,string Role)>
+@{
+    ViewData["Title"] = "Uživatelé";
+}
+<div class="container py-4">
+    @if (TempData["Msg"] is string m)
+    {
+        <div class="alert alert-success">@m</div>
+    }
+  <h1 class="h4 mb-3">Uživatelé</h1>
+  <table class="table table-sm align-middle">
+    <thead><tr><th>ID</th><th>E-mail</th><th>Jméno</th><th>Role</th><th></th></tr></thead>
+    <tbody>
+            @foreach (var u in Model)
+            {
+            <tr>
+              <td>@u.Id</td>
+              <td>@u.Email</td>
+              <td>@u.Name</td>
+              <td>@u.Role</td>
+              <td class="text-end">
+                        @if (u.Role == "Admin")
+                        {
+                      <form asp-action="Demote" asp-route-id="@u.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-secondary">Set Customer</button>
+                      </form>
+                        }
+                        else
+                        {
+                      <form asp-action="Promote" asp-route-id="@u.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-brand">Make Admin</button>
+                      </form>
+                        }
+              </td>
+            </tr>
+            }
+    </tbody>
+  </table>
+</div>

@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
 
 namespace BDAS2_Flowers.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class DiagnosticsController : Controller
     {
         private readonly OracleConnectionStringBuilder _csb;
-        // ляляляляляляллялля
         public DiagnosticsController(OracleConnectionStringBuilder csb) => _csb = csb;
 
         [HttpGet("/diag")]

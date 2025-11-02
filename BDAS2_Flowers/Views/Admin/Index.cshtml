@@ -1,0 +1,13 @@
+﻿@{
+    ViewData["Title"] = "Admin";
+}
+<div class="container py-4">
+  <h1 class="h3 mb-3">Admin panel</h1>
+  <div class="alert alert-info" style="color: #385752; background-color: #A1B4A5; border: 2px solid #385752;">
+    Přihlášený uživatel: <strong>@User.Identity?.Name</strong><br/>
+    Role: <strong>@string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value))</strong>
+  </div>
+  <ul class="list-group">
+    <li class="list-group-item"><a asp-controller="Admin" asp-action="Users" style="color: #A56266;">Správa uživatelů</a></li>
+  </ul>
+</div>
