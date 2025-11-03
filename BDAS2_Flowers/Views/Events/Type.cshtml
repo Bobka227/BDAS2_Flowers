@@ -1,14 +1,77 @@
-﻿@model BDAS2_Flowers.Controllers.EventTypeViewModel
+﻿@model BDAS2_Flowers.Models.ViewModels.EventTypeVm
 @{
     ViewData["Title"] = Model.Name;
-}
-<div class="container py-4">
-  <h1 class="mb-3">@Model.Name</h1>
-  <p class="lead">@Model.Description</p>
 
-  <form asp-controller="Orders" asp-action="CreateForEvent" method="get" class="d-flex gap-2">
+    var images = (IEnumerable<string>?)ViewBag.Images ?? Enumerable.Empty<string>();
+
+    string[] lines = (Model.Description ?? "").Replace("\r", "").Split('\n');
+    bool IsBullet(string s) => s.TrimStart().StartsWith("•");
+    var intro = lines.TakeWhile(l => !IsBullet(l)).Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+    var bullets = lines.SkipWhile(l => !IsBullet(l))
+                       .Select(l => l.Trim().TrimStart('•').Trim())
+                       .Where(l => l.Length > 0)
+                       .ToList();
+}
+
+<style>
+  .carousel-container { max-width: 980px; margin: 0 auto; }
+  .carousel-control-prev-icon, .carousel-control-next-icon {
+      filter: invert(1) drop-shadow(0 0 4px rgba(0,0,0,.7));
+      opacity: 1;
+  }
+  .carousel-control-prev, .carousel-control-next { width: 8%; }
+</style>
+
+@if (images.Any())
+{
+      <div class="carousel-container mb-4">
+        <div id="eventCarousel" class="carousel slide" data-bs-ride="carousel">
+          <div class="carousel-inner rounded-4">
+                @{
+                    var first = true;
+                    foreach (var src in images)
+                    {
+                        <div class="carousel-item @(first ? "active" : "")">
+                          <img src="@src" class="d-block w-100" style="max-height:480px; object-fit:cover;" alt="event photo">
+                        </div>
+                        ;
+                        first = false;
+                    }
+                }
+          </div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#eventCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#eventCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        </div>
+      </div>
+}
+
+<section class="mb-4 p-4 p-md-5 rounded-4 shadow-sm" style="background: var(--brand-100);">
+  <h1 class="mb-3">@Model.Name</h1>
+
+    @if (intro.Count > 0)
+    {
+          <p class="lead">@string.Join(" ", intro)</p>
+    }
+
+    @if (bullets.Count > 0)
+    {
+          <ul class="ms-2">
+            @foreach (var item in bullets)
+            {
+                    <li class="mb-1">@item</li>
+            }
+          </ul>
+    }
+
+  <form asp-controller="Orders" asp-action="CreateForEvent" method="get" class="d-flex gap-2 mt-3">
     <input type="hidden" name="eventTypeId" value="@Model.EventTypeId" />
-    <button class="btn btn-primary btn-lg">Objednat organizaci</button>
-    <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Zpět</a>
+    <button class="btn btn-lg btn-brand">Objednat organizaci</button>
+    <a class="btn btn-lg btn-brand-second" asp-controller="Home" asp-action="Index">Zpět</a>
   </form>
-</div>
+</section>
