@@ -1,0 +1,275 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.ProfileVm
+@{
+    ViewData["Title"] = "Můj profil";
+}
+
+<div class="row g-4 align-items-start profile-page">
+    <div class="col-12 col-md-4 col-lg-3">
+        <div class="card shadow-sm border-0 rounded-4 profile-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <form id="avatarForm"
+                          asp-controller="Profile" asp-action="UploadAvatar"
+                          method="post" enctype="multipart/form-data"
+                          class="position-relative d-inline-block flex-shrink-0">
+                        @Html.AntiForgeryToken()
+
+                        <input id="avatarInput" name="file" type="file"
+                               class="visually-hidden"
+                               accept="image/png,image/jpeg,image/gif,image/webp" />
+
+                        <label for="avatarInput" class="avatar-upload m-0">
+                            <img src="/media/avatar/@Model.UserId"
+                                 class="avatar-img"
+                                 alt="avatar"
+                                 loading="lazy"
+                                 onerror="this.onerror=null; this.src='/img/avatar-placeholder.png';">
+
+                            <span class="avatar-overlay">
+                                <i class="bi bi-camera"></i>
+                            </span>
+                        </label>
+                    </form>
+
+                    <div>
+                        <div class="fw-semibold">@Model.FullName</div>
+                        <div class="text-muted small">@Model.Email</div>
+                    </div>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       data-bs-toggle="tab" href="#tab-overview">
+                        <i class="bi bi-person-badge"></i> Přehled
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       data-bs-toggle="tab" href="#tab-orders">
+                        <i class="bi bi-receipt"></i> Objednávky
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       data-bs-toggle="tab" href="#tab-addresses">
+                        <i class="bi bi-geo-alt"></i> Adresy
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       data-bs-toggle="tab" href="#tab-email">
+                        <i class="bi bi-envelope"></i> Změnit e-mail
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       data-bs-toggle="tab" href="#tab-password">
+                        <i class="bi bi-key"></i> Změnit heslo
+                    </a>
+                    <div class="list-group-item">
+                        <form method="post" action="/auth/logout" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-box-arrow-right"></i> Odhlásit se
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-8 col-lg-9">
+            @if (TempData["ProfileOk"] is string ok)
+            {
+                        <div class="alert alert-success">@ok</div>
+            }
+            @if (TempData["ProfileError"] is string err)
+            {
+                        <div class="alert alert-danger">@err</div>
+            }
+
+        <div class="tab-content">
+            <div class="tab-pane fade" id="tab-overview">
+                <div class="card shadow-sm border-0 rounded-4 profile-card">
+                    <div class="card-body">
+                        <h1 class="h4 mb-4">Můj profil</h1>
+                        <dl class="row">
+                            <dt class="col-sm-3">Jméno</dt>
+                            <dd class="col-sm-9">@Model.FullName</dd>
+
+                            <dt class="col-sm-3">E-mail</dt>
+                            <dd class="col-sm-9">@Model.Email</dd>
+
+                            <dt class="col-sm-3">Role</dt>
+                            <dd class="col-sm-9">@Model.Role</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-orders">
+                <div class="card shadow-sm border-0 rounded-4 profile-card">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Moje objednávky</h2>
+                        <p class="text-muted mb-0">Тут позже выведем список заказов из базы.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-addresses">
+                <div class="card shadow-sm border-0 rounded-4 profile-card">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Adresy</h2>
+                        <p class="text-muted mb-0">Здесь будет управление адресами доставки.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-email">
+                <div class="card shadow-sm border-0 rounded-4 profile-card">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Změnit e-mail</h2>
+                        <form asp-controller="Profile" asp-action="ChangeEmail" method="post">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label class="form-label">Nový e-mail</label>
+                                <input name="NewEmail" type="email" class="form-control" placeholder="novy@email.cz" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Heslo (pro potvrzení)</label>
+                                <input name="Password" type="password" class="form-control" required />
+                            </div>
+                            <button type="submit" class="btn btn-brand">Uložit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="tab-pane fade" id="tab-password">
+                <div class="card shadow-sm border-0 rounded-4 profile-card">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Změnit heslo</h2>
+                        <form asp-controller="Profile" asp-action="ChangePassword" method="post">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label class="form-label">Aktuální heslo</label>
+                                <input name="CurrentPassword" type="password" class="form-control" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nové heslo</label>
+                                <input name="NewPassword" type="password" class="form-control" minlength="6" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Potvrdit nové heslo</label>
+                                <input name="ConfirmNewPassword" type="password" class="form-control" minlength="6" required />
+                            </div>
+                            <button type="submit" class="btn btn-brand">Uložit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div> 
+    </div> 
+</div> 
+
+@section Scripts {
+    <script>
+        (function () {
+          const url = new URL(window.location);
+          const tab = url.searchParams.get('tab') || window.location.hash.replace('#','') || 'overview';
+          const trigger = document.querySelector(`a[href="#tab-${tab}"]`) || document.querySelector('a[href="#tab-overview"]');
+          if (trigger) new bootstrap.Tab(trigger).show();
+        })();
+        const avatarInput = document.getElementById('avatarInput');
+        avatarInput?.addEventListener('change', () => {
+          const f = avatarInput.files?.[0];
+          if (!f) return;
+          const max = 10 * 1024 * 1024; 
+          if (f.size > max) {
+            alert('Maximální velikost souboru je 10 MB.');
+            avatarInput.value = ''; 
+            return;
+          }
+          document.getElementById('avatarForm')?.submit();
+        });
+
+
+    </script>
+    <style>
+        .profile-page {
+            min-height: calc(100vh - 220px);
+            margin-bottom: 2rem;
+        }
+
+        .profile-card .card-body {
+            padding: 2rem 2rem;
+        }
+
+        @@media (min-width: 1200px) {
+            .profile-card .card-body {
+                padding: 2.5rem 2.5rem;
+            }
+        }
+
+        .rounded-4 {
+            border-radius: 1rem !important;
+        }
+
+        .list-group-item {
+            padding: .875rem 1rem;
+        }
+
+        .list-group-item-action {
+            border: 0;
+        }
+
+            .list-group-item-action.active {
+                background: #f6e4e8;
+                color: #8a3d4a;
+            }
+
+        .avatar-placeholder {
+            width: 64px;
+            height: 64px;
+            background: #f3d9df;
+            border: 2px solid #eac1c9;
+            border-radius: 50%;
+        }
+
+        .card-body h1.h4 {
+            font-size: 1.75rem;
+        }
+
+        dl.row dt {
+            font-weight: 600;
+        }
+
+        .avatar-img {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #eac1c9;
+            display: block;
+        }
+
+        .avatar-upload {
+            position: relative;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            background: rgba(0,0,0,.35);
+            opacity: 0;
+            transition: opacity .15s ease-in-out;
+            font-size: 1.1rem;
+        }
+
+        .avatar-upload:hover .avatar-overlay {
+            opacity: 1;
+        }
+
+    </style>
+}
