@@ -24,7 +24,6 @@ namespace BDAS2_Flowers.Controllers
             }
             catch (Exception ex)
             {
-                // сразу увидим причину, если что-то не так
                 return Problem(ex.Message);
             }
         }
