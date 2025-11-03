@@ -15,7 +15,6 @@ builder.Services.AddSingleton(new OracleConnectionStringBuilder(oracleCs));
 builder.Services.AddScoped<IDbFactory, OracleDbFactory>();
 
 builder.Services.AddSingleton<IPasswordHasher, HmacSha256PasswordHasher>();
-
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>
     {
@@ -31,6 +30,15 @@ builder.Services.AddAuthorization(opt =>
     opt.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(opt =>
+{
+    opt.IdleTimeout = TimeSpan.FromHours(2);
+    opt.Cookie.HttpOnly = true;
+    opt.Cookie.IsEssential = true;          
+    opt.Cookie.Name = "bdas2.session";
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -43,6 +51,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

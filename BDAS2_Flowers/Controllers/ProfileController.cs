@@ -7,7 +7,7 @@ using BDAS2_Flowers.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-
+using System.Data;
 namespace BDAS2_Flowers.Controllers
 {
     [Authorize]
@@ -25,17 +25,59 @@ namespace BDAS2_Flowers.Controllers
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
-        [HttpGet("/profile")]
-        public IActionResult Index()
+
+
+    [HttpGet("/profile")]
+        public async Task<IActionResult> Index()
         {
-            return View(new ProfileVm
+            var vm = new ProfileVm
             {
                 UserId = CurrentUserId,
                 FullName = User.FindFirstValue(ClaimTypes.Name) ?? "",
                 Email = User.FindFirstValue(ClaimTypes.Email) ?? "",
                 Role = User.FindFirstValue(ClaimTypes.Role) ?? ""
-            });
+            };
+
+            await using var con = new OracleConnection(_cfg.GetConnectionString("Oracle"));
+            await con.OpenAsync();
+
+            var sql = @"
+        SELECT v.ORDERID,
+               v.ORDERDATE,
+               v.STATUS,
+               v.DELIVERY,
+               v.SHOP,
+               FN_ORDER_TOTAL(v.ORDERID) AS TOTAL
+          FROM VW_ORDERS v
+         WHERE EXISTS (
+               SELECT 1
+                 FROM ""ORDER"" o
+                WHERE o.ORDERID = v.ORDERID
+                  AND o.USERID  = :p_uid)
+         ORDER BY v.ORDERDATE DESC";
+
+            await using var cmd = new OracleCommand(sql, con);
+            cmd.BindByName = true; // <-- важно!
+            cmd.Parameters.Add("p_uid", OracleDbType.Int32).Value = CurrentUserId;
+
+            await using var rd = await cmd.ExecuteReaderAsync();
+            while (await rd.ReadAsync())
+            {
+                vm.Orders.Add(new ProfileOrderRowVm
+                {
+                    OrderId = rd.GetInt32(0),
+                    OrderDate = rd.GetDateTime(1),
+                    Status = rd.GetString(2),
+                    Delivery = rd.GetString(3),
+                    Shop = rd.GetString(4),
+                    Total = Convert.ToDecimal(rd.GetDecimal(5))
+                });
+            }
+
+            return View(vm);
         }
+
+
 
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/change-email")]

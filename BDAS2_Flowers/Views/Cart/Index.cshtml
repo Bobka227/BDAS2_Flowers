@@ -1,0 +1,64 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.CartVm
+@{
+    ViewData["Title"] = "Košík";
+}
+
+<h2 class="mb-3">Košík</h2>
+
+@if (!Model.Items.Any())
+{
+    <div class="alert alert-info">Košík je prázdný.</div>
+    <a class="btn btn-secondary" href="/">Zpět do katalogu</a>
+}
+else
+{
+    <div class="table-responsive mb-3">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Produkt</th>
+                    <th style="width:120px">Množství</th>
+                    <th style="width:140px">Cena/ks</th>
+                    <th style="width:140px">Řádek</th>
+                    <th style="width:120px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var i in Model.Items)
+                {
+                    <tr>
+                        <td>@i.Title</td>
+                        <td>@i.Quantity</td>
+                        <td>@i.UnitPrice Kč</td>
+                        <td>@(i.UnitPrice* i.Quantity) Kč</td>
+                        <td>
+                            <form asp-controller="Cart" asp-action="Remove" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@i.ProductId" />
+                                <button class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Odebrat
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3" class="text-end">Celkem:</th>
+                    <th>@Model.Total Kč</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="d-flex gap-2">
+        <form asp-controller="Cart" asp-action="Clear" method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-outline-secondary">Vyprázdnit</button>
+        </form>
+        <a class="btn btn-primary" href="/orders/create">Pokračovat k objednávce</a>
+        <a class="btn btn-light" href="/">Pokračovat v nákupu</a>
+    </div>
+}

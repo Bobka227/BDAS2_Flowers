@@ -1,0 +1,152 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.OrderCreateVm
+@{
+    ViewData["Title"] = "Vytvořit objednávku";
+}
+
+<h2 class="mb-3">Vytvořit objednávku</h2>
+
+@if (TempData["OrderError"] is string err && !string.IsNullOrWhiteSpace(err))
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<form method="post" asp-action="Create" asp-controller="Orders" class="row g-3">
+    @Html.AntiForgeryToken()
+
+    <!-- Doručení / Prodejna / Adresa -->
+    <div class="col-md-4">
+        <label class="form-label">Doručení</label>
+        <select class="form-select"
+                asp-for="DeliveryMethodId"
+                asp-items="@(new SelectList(Model.DeliveryMethods, "Id", "Name"))"></select>
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Prodejna</label>
+        <select class="form-select"
+                asp-for="ShopId"
+                asp-items="@(new SelectList(Model.Shops, "Id", "Name"))"></select>
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Adresa</label>
+        <select class="form-select"
+                asp-for="AddressId"
+                asp-items="@(new SelectList(Model.Addresses, "Id", "Name", Model.AddressId))">
+            <option value="">-- vyberte existující adresu --</option>
+        </select>
+    </div>
+
+    <!-- Platba -->
+    <div class="col-md-4">
+        <label class="form-label">Platba</label>
+        <select class="form-select" asp-for="PaymentType">
+            <option value="cash">Hotově</option>
+            <option value="card">Kartou</option>
+            <option value="cupon">Kupon</option>
+        </select>
+    </div>
+
+    <!-- Nová adresa -->
+    <div class="col-12">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" asp-for="UseNewAddress" id="chkNewAddress" />
+            <label class="form-check-label" for="chkNewAddress">
+                Chci zadat <strong>novou adresu</strong>
+            </label>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <label class="form-label">Ulice</label>
+        <input class="form-control" asp-for="Street" id="Street" />
+    </div>
+    <div class="col-6 col-lg-2">
+        <label class="form-label">Číslo domu</label>
+        <input class="form-control" asp-for="HouseNumber" id="HouseNumber" type="number" min="1" />
+    </div>
+    <div class="col-6 col-lg-2">
+        <label class="form-label">PSČ</label>
+        <input class="form-control" asp-for="PostalCode" id="PostalCode" type="number" min="1" />
+    </div>
+
+    <!-- Položky -->
+    <div class="col-12">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th style="width:55%">Produkt</th>
+                        <th style="width:20%">Množství</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="items">
+                @for (var i = 0; i < Model.Items.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <select class="form-select" name="Items[@i].ProductId">
+                                @foreach (var p in Model.Products)
+                                {
+                                        <option value="@p.Id" selected="@(Model.Items[i].ProductId == p.Id)">@p.Name</option>
+                                    }
+                            </select>
+                        </td>
+                        <td>
+                            <input class="form-control" type="number" min="1" name="Items[@i].Quantity" value="@(Model.Items[i].Quantity > 0 ? Model.Items[i].Quantity : 1)" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">Smazat</button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn btn-outline-primary" onclick="addRow()">Přidat položku</button>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+        <a class="btn btn-light" href="/cart">Zpět do košíku</a>
+        <button class="btn btn-primary" type="submit">Odeslat objednávku</button>
+    </div>
+</form>
+
+@section Scripts{
+<script>
+    // přepínání povinnosti nového adresního bloku
+    function toggleAddress() {
+        const useNew = document.getElementById('chkNewAddress').checked;
+        ['Street','HouseNumber','PostalCode'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.disabled = !useNew;
+            el.required = useNew;
+        });
+        // když zadáváme novou adresu, nemá být vybrána existující
+        document.querySelector('select[name="AddressId"]')?.toggleAttribute('disabled', useNew);
+        if (useNew) {
+            const sel = document.querySelector('select[name="AddressId"]');
+            if (sel) sel.value = '';
+        }
+    }
+    document.getElementById('chkNewAddress')?.addEventListener('change', toggleAddress);
+    toggleAddress();
+
+    function addRow() {
+        const tbody = document.getElementById('items');
+        const index = tbody.rows.length;
+        const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products));
+        const sel = `<select class="form-select" name="Items[${index}].ProductId">` +
+            products.map(p => `<option value="${p.Id}">${p.Name}</option>`).join('') +
+            `</select>`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sel}</td>
+            <td><input class="form-control" type="number" min="1" name="Items[${index}].Quantity" value="1" /></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">Smazat</button></td>`;
+        tbody.appendChild(row);
+    }
+</script>
+}
