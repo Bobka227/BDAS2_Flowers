@@ -1,17 +1,16 @@
-﻿@model BDAS2_Flowers.Models.ViewModels.EventTypeCardVm
-<div class="product-card">
-    <img src="@Model.ImageUrl" alt="@Model.Name" />
-    <div class="content">
-        <div class="title">@Model.Name</div>
-        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+﻿@model BDAS2_Flowers.Models.ViewModels.EventTypeVm
+
+<div class="card h-100 shadow-sm position-relative">
+    <div class="card-body">
+        <h5 class="card-title mb-1">@Model.Name</h5>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
         {
-            <div class="subtitle">@Model.Subtitle</div>
+                <p class="text-muted small mb-0">@Model.Description</p>
         }
     </div>
-    <div class="action d-grid gap-2">
-        <a class="btn btn-brand" asp-controller="Catalog" asp-action="Index">Objednat kytici</a>
-        <a class="btn btn-outline-secondary" asp-action="Detail" asp-route-id="@Model.Id" asp-route-name="@Model.Name">
-            Více informací
-        </a>
-    </div>
+
+    <a class="stretched-link"
+       asp-controller="Events"
+       asp-action="Type"
+       asp-route-id="@Model.EventTypeId"></a>
 </div>

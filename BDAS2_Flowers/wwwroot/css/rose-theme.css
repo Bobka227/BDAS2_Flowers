@@ -38,6 +38,33 @@ body {
         border-color: var(--brand-contrast);
     }
 
+.btn-brand-second {
+    border: 2px solid var(--accent-dark);
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    border-radius: 12px;
+    padding: .6rem 1rem;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+    .btn-brand-second.btn-lg {
+        border: 2px solid var(--accent-dark);
+    }
+
+    .btn-brand-second:hover,
+    .btn-brand-second:focus,
+    .btn-brand-second:active {
+        background: var(--accent-dark);
+        color: #fff;
+        border-color: var(--accent-dark);
+    }
+
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item:active {
+    background: var(--brand);
+}
+
 .hero {
     background: linear-gradient(90deg, var(--brand), var(--brand-100));
     border-radius: 28px;
