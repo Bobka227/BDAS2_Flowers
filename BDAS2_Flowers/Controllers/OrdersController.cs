@@ -20,7 +20,6 @@ namespace BDAS2_Flowers.Controllers
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
-        // GET: /orders/create
         [HttpGet("/orders/create")]
         public async Task<IActionResult> Create()
         {
@@ -44,7 +43,6 @@ namespace BDAS2_Flowers.Controllers
             return View(vm);
         }
 
-        // POST: /orders/create
         [ValidateAntiForgeryToken]
         [HttpPost("/orders/create")]
         public async Task<IActionResult> Create(OrderCreateVm vm)
@@ -62,10 +60,8 @@ namespace BDAS2_Flowers.Controllers
 
             try
             {
-                // 0) статус Pending берём из БД
                 var pendingId = await GetPendingStatusIdAsync();
 
-                // 1) платёж
                 var type = (vm.PaymentType ?? "cash").ToLowerInvariant();
                 int paymentId;
                 await using (var cmd = new OracleCommand("PRC_CREATE_PAYMENT", con)
@@ -79,8 +75,6 @@ namespace BDAS2_Flowers.Controllers
                     paymentId = Convert.ToInt32(o.Value.ToString());
                 }
 
-                // 1.5) адрес
-                // ... внутри try, перед шагом "2) заказ"
                 int addressId;
                 var wantsNewAddress =
                     vm.UseNewAddress ||
@@ -118,16 +112,15 @@ namespace BDAS2_Flowers.Controllers
                 }
 
 
-                // 2) заказ
                 int orderId;
                 await using (var cmd = new OracleCommand("PRC_CREATE_ORDER", con)
                 { CommandType = CommandType.StoredProcedure, Transaction = tx })
                 {
                     cmd.Parameters.Add("p_user_id", OracleDbType.Int32).Value = CurrentUserId;
                     cmd.Parameters.Add("p_deliverymethodid", OracleDbType.Int32).Value = vm.DeliveryMethodId;
-                    cmd.Parameters.Add("p_statusid", OracleDbType.Int32).Value = pendingId;      // <-- фикс
+                    cmd.Parameters.Add("p_statusid", OracleDbType.Int32).Value = pendingId;
                     cmd.Parameters.Add("p_shopid", OracleDbType.Int32).Value = vm.ShopId;
-                    cmd.Parameters.Add("p_addressid", OracleDbType.Int32).Value = addressId;    // <-- фикс
+                    cmd.Parameters.Add("p_addressid", OracleDbType.Int32).Value = addressId;
                     cmd.Parameters.Add("p_paymentid", OracleDbType.Int32).Value = paymentId;
                     var o = new OracleParameter("o_order_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
                     cmd.Parameters.Add(o);
@@ -135,7 +128,6 @@ namespace BDAS2_Flowers.Controllers
                     orderId = Convert.ToInt32(o.Value.ToString());
                 }
 
-                // 3) позиции
                 foreach (var it in vm.Items)
                 {
                     await using var cmd = new OracleCommand("PRC_ADD_ITEM", con)
@@ -146,7 +138,6 @@ namespace BDAS2_Flowers.Controllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                // 4) финализация (явный курсор)
                 await using (var cmd = new OracleCommand("PRC_FINALIZE_ORDER_XCUR", con)
                 { CommandType = CommandType.StoredProcedure, Transaction = tx })
                 {
@@ -167,7 +158,6 @@ namespace BDAS2_Flowers.Controllers
             }
         }
 
-        // GET: /orders/{id}
         [HttpGet("/orders/{id:int}")]
         public async Task<IActionResult> Details(int id)
         {
@@ -211,7 +201,9 @@ namespace BDAS2_Flowers.Controllers
                     : ((OracleDecimal)sum.Value).Value;
             }
 
-
+            // TODO: UDELAT SKRZ VIEW
+            // TODO: UDELAT SKRZ VIEW
+            // TODO: UDELAT SKRZ VIEW
             model.Items = new List<OrderItemDetailsVm>();
             await using (var cmd = new OracleCommand(@"
                 SELECT i.PRODUCTID, p.NAME, i.QUANTITY, i.UNITPRICE, (i.QUANTITY * i.UNITPRICE) AS LINE_TOTAL
@@ -238,6 +230,9 @@ namespace BDAS2_Flowers.Controllers
             return View(model);
         }
 
+        // NEPOUZIVA SE
+        // NEPOUZIVA SE
+        // NEPOUZIVA SE
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         [HttpPost("/orders/{id:int}/status")]

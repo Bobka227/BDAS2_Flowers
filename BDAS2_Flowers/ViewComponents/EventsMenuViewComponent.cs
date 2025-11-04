@@ -16,6 +16,7 @@ public class EventsMenuViewComponent : ViewComponent
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
 
+        // TODO TO VIEW
         cmd.CommandText = onlyUsed
             ? @"SELECT et.eventtypeid, et.eventname
                   FROM event_type et

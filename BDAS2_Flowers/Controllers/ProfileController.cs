@@ -41,6 +41,7 @@ namespace BDAS2_Flowers.Controllers
             await using var con = new OracleConnection(_cfg.GetConnectionString("Oracle"));
             await con.OpenAsync();
 
+            // TODO TO VIEW
             var sql = @"
         SELECT v.ORDERID,
                v.ORDERDATE,
@@ -57,7 +58,7 @@ namespace BDAS2_Flowers.Controllers
          ORDER BY v.ORDERDATE DESC";
 
             await using var cmd = new OracleCommand(sql, con);
-            cmd.BindByName = true; // <-- важно!
+            cmd.BindByName = true;
             cmd.Parameters.Add("p_uid", OracleDbType.Int32).Value = CurrentUserId;
 
             await using var rd = await cmd.ExecuteReaderAsync();
@@ -237,6 +238,5 @@ namespace BDAS2_Flowers.Controllers
             TempData["ProfileOk"] = "Avatar byl aktualizován.";
             return Redirect("/profile?tab=overview");
         }
-
     }
 }

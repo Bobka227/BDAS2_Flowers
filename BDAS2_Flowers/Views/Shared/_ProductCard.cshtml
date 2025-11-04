@@ -1,8 +1,6 @@
 ﻿@model BDAS2_Flowers.Models.ViewModels.ProductCardVm
-
 <div class="product-card">
     <img src="@Model.ImageUrl" alt="@Model.Title" />
-
     <div class="content">
         <div class="title">@Model.Title</div>
         @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
@@ -13,12 +11,12 @@
     </div>
 
     <div class="action">
-        <form asp-controller="Cart" asp-action="Add" method="post" class="mt-2">
+        <form method="post" asp-controller="Cart" asp-action="Add" class="w-100">
             @Html.AntiForgeryToken()
             <input type="hidden" name="productId" value="@Model.ProductId" />
             <input type="hidden" name="quantity" value="1" />
             <button type="submit" class="btn btn-brand w-100">
-                <i class="bi bi-bag-plus"></i> Přidat do košíku
+                <i class="bi bi-bag"></i> Přidat do košíku
             </button>
         </form>
     </div>
