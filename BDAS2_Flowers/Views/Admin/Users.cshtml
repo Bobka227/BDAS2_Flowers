@@ -7,34 +7,49 @@
     {
         <div class="alert alert-success">@m</div>
     }
-  <h1 class="h4 mb-3">Uživatelé</h1>
-  <table class="table table-sm align-middle">
-    <thead><tr><th>E-mail</th><th>Jméno</th><th>Role</th><th></th></tr></thead>
-    <tbody>
+
+    <h1 class="h4 mb-3">Uživatelé</h1>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>E-mail</th>
+                <th>Jméno</th>
+                <th>Role</th>
+                <th class="text-end">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
             @foreach (var u in Model)
             {
-            <tr>
-              <td>@u.Email</td>
-              <td>@u.Name</td>
-              <td>@u.Role</td>
-              <td class="text-end">
-                        @if (u.Role == "Admin")
-                        {
-                      <form asp-action="Demote" asp-route-id="@u.Id" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                        <button class="btn btn-sm btn-outline-secondary">Set Customer</button>
-                      </form>
-                        }
-                        else
-                        {
-                      <form asp-action="Promote" asp-route-id="@u.Id" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                        <button class="btn btn-sm btn-brand">Make Admin</button>
-                      </form>
-                        }
-              </td>
-            </tr>
+                <tr>
+                    <td>@u.Email</td>
+                    <td>@u.Name</td>
+                    <td>@u.Role</td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-primary btn-sm me-2"
+                           asp-controller="Admin"
+                           asp-action="UserOrders"
+                           asp-route-email="@u.Email">
+                            Objednávky
+                        </a>
+
+                        <form asp-action="SetRole" asp-route-email="@u.Email" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            @if (u.Role == "Admin")
+                            {
+                                <input type="hidden" name="roleName" value="Customer" />
+                                <button class="btn btn-sm btn-outline-secondary">Set Customer</button>
+                            }
+                            else
+                            {
+                                <input type="hidden" name="roleName" value="Admin" />
+                                <button class="btn btn-sm btn-brand">Make Admin</button>
+                            }
+                        </form>
+                    </td>
+                </tr>
             }
-    </tbody>
-  </table>
+        </tbody>
+    </table>
 </div>

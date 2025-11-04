@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Oracle.ManagedDataAccess.Client;
 using BDAS2_Flowers.Data;
 using BDAS2_Flowers.Security;
@@ -10,6 +11,8 @@ if (string.IsNullOrWhiteSpace(oracleCs))
     throw new InvalidOperationException("ConnectionStrings:Oracle se nenasel. Uprav User Secrets.");
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton(new OracleConnectionStringBuilder(oracleCs));
 builder.Services.AddScoped<IDbFactory, OracleDbFactory>();
@@ -35,7 +38,7 @@ builder.Services.AddSession(opt =>
 {
     opt.IdleTimeout = TimeSpan.FromHours(2);
     opt.Cookie.HttpOnly = true;
-    opt.Cookie.IsEssential = true;          
+    opt.Cookie.IsEssential = true;
     opt.Cookie.Name = "bdas2.session";
 });
 

@@ -14,17 +14,15 @@
         public int DeliveryMethodId { get; set; }
         public int ShopId { get; set; }
 
-        // адрес
         public bool UseNewAddress { get; set; } = true;
-        public int? AddressId { get; set; }      // когда UseNewAddress = false (выбор из списка)
-        public int PostalCode { get; set; }      // когда UseNewAddress = true (ручной ввод)
+        public int? AddressId { get; set; }     
+        public int PostalCode { get; set; }     
         public string Street { get; set; } = "";
         public int HouseNumber { get; set; }
 
-        public string PaymentType { get; set; } = "cash"; // 'cash'|'card'|'cupon'
+        public string PaymentType { get; set; } = "cash"; 
         public List<OrderItemVm> Items { get; set; } = new();
 
-        // выпадающие списки
         public List<IdNameVm> DeliveryMethods { get; set; } = new();
         public List<IdNameVm> Shops { get; set; } = new();
         public List<IdNameVm> Addresses { get; set; } = new();
@@ -43,6 +41,7 @@
     public class OrderDetailsVm
     {
         public int OrderId { get; set; }
+        public string PublicNo { get; set; } = "";
         public DateTime OrderDate { get; set; }
         public string Customer { get; set; } = "";
         public string Status { get; set; } = "";

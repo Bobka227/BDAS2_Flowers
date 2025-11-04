@@ -4,16 +4,16 @@ using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using System.Data;
-using System.Linq;
 using System.Security.Claims;
+using BDAS2_Flowers.Data;
 
 namespace BDAS2_Flowers.Controllers
 {
     [Authorize]
     public class OrdersController : Controller
     {
-        private readonly IConfiguration _cfg;
-        public OrdersController(IConfiguration cfg) => _cfg = cfg;
+        private readonly IDbFactory _db;              // ⬅️ вместо IConfiguration
+        public OrdersController(IDbFactory db) => _db = db;
 
         private const string CartKey = "CART";
 
@@ -29,6 +29,7 @@ namespace BDAS2_Flowers.Controllers
                 Items = new List<OrderItemVm>()
             };
 
+            // все справочники через фабрику
             vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT Id, Name FROM VW_DELIVERY_METHODS");
             vm.Shops = await LoadIdNameAsync(@"SELECT ShopId AS Id, Name AS Name FROM FLOWER_SHOP");
             vm.Addresses = await LoadIdNameAsync(@"SELECT AddressId AS Id, Street || ' ' || HouseNumber || ', ' || PostalCode AS Name FROM ADDRESS");
@@ -53,16 +54,15 @@ namespace BDAS2_Flowers.Controllers
                 return Redirect("/orders/create");
             }
 
-            var cs = _cfg.GetConnectionString("Oracle");
-            await using var con = new OracleConnection(cs);
-            await con.OpenAsync();
+            await using var con = await _db.CreateOpenAsync(); 
             await using var tx = con.BeginTransaction();
 
             try
             {
-                var pendingId = await GetPendingStatusIdAsync();
+                var pendingId = await GetPendingStatusIdAsync(con); 
 
                 var type = (vm.PaymentType ?? "cash").ToLowerInvariant();
+
                 int paymentId;
                 await using (var cmd = new OracleCommand("PRC_CREATE_PAYMENT", con)
                 { CommandType = CommandType.StoredProcedure, Transaction = tx })
@@ -110,7 +110,6 @@ namespace BDAS2_Flowers.Controllers
                     }
                     addressId = vm.AddressId.Value;
                 }
-
 
                 int orderId;
                 await using (var cmd = new OracleCommand("PRC_CREATE_ORDER", con)
@@ -161,56 +160,34 @@ namespace BDAS2_Flowers.Controllers
         [HttpGet("/orders/{id:int}")]
         public async Task<IActionResult> Details(int id)
         {
-            var cs = _cfg.GetConnectionString("Oracle");
-            await using var con = new OracleConnection(cs);
-            await con.OpenAsync();
+            await using var con = await _db.CreateOpenAsync();  
 
             var model = new OrderDetailsVm();
 
             await using (var cmd = new OracleCommand(@"
-                SELECT o.ORDERID, o.ORDERDATE, o.CUSTOMER, o.STATUS, o.DELIVERY, o.SHOP
-                FROM VW_ORDERS o
-                WHERE o.ORDERID = :id", con))
+                SELECT ORDER_NO, ORDERDATE, CUSTOMER, STATUS, DELIVERY, SHOP, TOTAL
+                FROM VW_ORDER_DETAILS
+                WHERE ORDERID = :id", con))
             {
                 cmd.Parameters.Add(new OracleParameter("id", id));
                 await using var rd = await cmd.ExecuteReaderAsync();
-                if (await rd.ReadAsync())
-                {
-                    model.OrderId = rd.GetInt32(0);
-                    model.OrderDate = rd.GetDateTime(1);
-                    model.Customer = rd.GetString(2);
-                    model.Status = rd.GetString(3);
-                    model.Delivery = rd.GetString(4);
-                    model.Shop = rd.GetString(5);
-                }
-                else return NotFound();
+                if (!await rd.ReadAsync()) return NotFound();
+
+                model.PublicNo = rd.GetString(0);
+                model.OrderDate = rd.GetDateTime(1);
+                model.Customer = rd.GetString(2);
+                model.Status = rd.GetString(3);
+                model.Delivery = rd.GetString(4);
+                model.Shop = rd.GetString(5);
+                model.Total = (decimal)rd.GetDecimal(6);
             }
 
-
-            await using (var cmd = new OracleCommand(@"BEGIN :x := FN_ORDER_TOTAL(:oid); END;", con))
-            {
-                cmd.CommandType = CommandType.Text;
-                var sum = new OracleParameter("x", OracleDbType.Decimal) { Direction = ParameterDirection.Output };
-                cmd.Parameters.Add(sum);
-                cmd.Parameters.Add("oid", OracleDbType.Int32).Value = id;
-
-                await cmd.ExecuteNonQueryAsync();
-
-                model.Total = sum.Value == null || sum.Value == DBNull.Value
-                    ? 0m
-                    : ((OracleDecimal)sum.Value).Value;
-            }
-
-            // TODO: UDELAT SKRZ VIEW
-            // TODO: UDELAT SKRZ VIEW
-            // TODO: UDELAT SKRZ VIEW
             model.Items = new List<OrderItemDetailsVm>();
             await using (var cmd = new OracleCommand(@"
-                SELECT i.PRODUCTID, p.NAME, i.QUANTITY, i.UNITPRICE, (i.QUANTITY * i.UNITPRICE) AS LINE_TOTAL
-                FROM ITEM i
-                JOIN PRODUCT p ON p.PRODUCTID = i.PRODUCTID
-                WHERE i.ORDERID = :id
-                ORDER BY p.NAME", con))
+                SELECT productid, product_name, quantity, unitprice, line_total
+                FROM VW_ORDER_ITEMS
+                WHERE orderid = :id
+                ORDER BY product_name", con))
             {
                 cmd.Parameters.Add(new OracleParameter("id", id));
                 await using var rd = await cmd.ExecuteReaderAsync();
@@ -230,54 +207,18 @@ namespace BDAS2_Flowers.Controllers
             return View(model);
         }
 
-        // NEPOUZIVA SE
-        // NEPOUZIVA SE
-        // NEPOUZIVA SE
-        [Authorize(Roles = "Admin")]
-        [ValidateAntiForgeryToken]
-        [HttpPost("/orders/{id:int}/status")]
-        public async Task<IActionResult> ChangeStatus(int id, int statusId)
+
+        private async Task<int> GetPendingStatusIdAsync(OracleConnection con)
         {
-            var cs = _cfg.GetConnectionString("Oracle");
-            await using var con = new OracleConnection(cs);
-            await con.OpenAsync();
-
-            try
-            {
-                await using var cmd = new OracleCommand("PRC_CHANGE_ORDER_STATUS", con)
-                { CommandType = CommandType.StoredProcedure };
-                cmd.Parameters.Add("p_order_id", OracleDbType.Int32).Value = id;
-                cmd.Parameters.Add("p_status_id", OracleDbType.Int32).Value = statusId;
-                cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 50).Value = User.Identity?.Name ?? "system";
-                await cmd.ExecuteNonQueryAsync();
-
-                TempData["OrderOk"] = "Status byl změněn.";
-            }
-            catch (Exception ex)
-            {
-                TempData["OrderError"] = "Nelze změnit status: " + ex.Message;
-            }
-
-            return Redirect($"/orders/{id}");
-        }
-
-        private async Task<int> GetPendingStatusIdAsync()
-        {
-            var cs = _cfg.GetConnectionString("Oracle");
-            await using var con = new OracleConnection(cs);
-            await con.OpenAsync();
             await using var cmd = new OracleCommand(@"SELECT StatusId FROM STATUS WHERE UPPER(StatusName) = 'PENDING'", con);
             var v = await cmd.ExecuteScalarAsync();
             if (v != null) return Convert.ToInt32(v);
-
             throw new InvalidOperationException("Tabulka STATUS je prázdná – doplňte číselník stavů.");
         }
 
         private async Task<List<IdNameVm>> LoadIdNameAsync(string sql)
         {
-            var cs = _cfg.GetConnectionString("Oracle");
-            await using var con = new OracleConnection(cs);
-            await con.OpenAsync();
+            await using var con = await _db.CreateOpenAsync();   
             var list = new List<IdNameVm>();
             await using var cmd = new OracleCommand(sql, con);
             await using var rd = await cmd.ExecuteReaderAsync();
