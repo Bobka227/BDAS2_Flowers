@@ -1,4 +1,4 @@
-﻿@model List<(int Id,string Email,string Name,string Role)>
+﻿@model List<(string Email,string Name,string Role,int Orders)>
 @{
     ViewData["Title"] = "Uživatelé";
 }
@@ -9,44 +9,37 @@
     }
 
     <h1 class="h4 mb-3">Uživatelé</h1>
-
     <table class="table table-sm align-middle">
         <thead>
-            <tr>
-                <th>E-mail</th>
-                <th>Jméno</th>
-                <th>Role</th>
-                <th class="text-end">Akce</th>
-            </tr>
+            <tr><th>E-mail</th><th>Jméno</th><th>Role</th><th>Objednávek</th><th class="text-end">Akce</th></tr>
         </thead>
         <tbody>
             @foreach (var u in Model)
             {
                 <tr>
-                    <td>@u.Email</td>
+                    <td>
+                        <a href="/admin/users/@u.Email/orders">@u.Email</a>
+                    </td>
                     <td>@u.Name</td>
                     <td>@u.Role</td>
+                    <td>@u.Orders</td>
                     <td class="text-end">
-                        <a class="btn btn-outline-primary btn-sm me-2"
-                           asp-controller="Admin"
-                           asp-action="UserOrders"
-                           asp-route-email="@u.Email">
-                            Objednávky
-                        </a>
-
-                        <form asp-action="SetRole" asp-route-email="@u.Email" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            @if (u.Role == "Admin")
-                            {
+                        @if (u.Role == "Admin")
+                        {
+                            <form action="/admin/users/@u.Email/role" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="roleName" value="Customer" />
                                 <button class="btn btn-sm btn-outline-secondary">Set Customer</button>
-                            }
-                            else
-                            {
+                            </form>
+                        }
+                        else
+                        {
+                            <form action="/admin/users/@u.Email/role" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="roleName" value="Admin" />
                                 <button class="btn btn-sm btn-brand">Make Admin</button>
-                            }
-                        </form>
+                            </form>
+                        }
                     </td>
                 </tr>
             }

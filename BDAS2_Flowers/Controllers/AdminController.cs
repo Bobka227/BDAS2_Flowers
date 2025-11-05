@@ -22,18 +22,19 @@ public class AdminController : Controller
     [HttpGet("users")]
     public async Task<IActionResult> Users()
     {
-        var rows = new List<(int Id, string Email, string Name, string Role)>();
+        var rows = new List<(string Email, string Name, string Role, int Orders)>();
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT u.userid, u.email, u.firstname||' '||u.lastname AS name, r.rolename
-            FROM ""USER"" u JOIN role r ON r.roleid=u.roleid
-            ORDER BY u.userid";
+        cmd.CommandText = @"SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT
+                        FROM VW_USERS_ADMIN
+                        ORDER BY FULLNAME";
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
-            rows.Add((DbRead.GetInt32(r, 0), r.GetString(1), r.GetString(2), r.GetString(3)));
+            rows.Add((r.GetString(0), r.GetString(1), r.GetString(2), BDAS2_Flowers.Data.DbRead.GetInt32(r, 3)));
+
         return View(rows);
     }
+
 
     [ValidateAntiForgeryToken]
     [HttpPost("users/{email}/role")]
