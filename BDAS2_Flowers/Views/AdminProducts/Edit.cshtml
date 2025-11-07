@@ -1,0 +1,78 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.ProductEditVm
+@{
+    var isEdit = Model.ProductId.HasValue;
+    ViewData["Title"] = isEdit ? "Edit product" : "Create product";
+}
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" asp-route-id="@Model.ProductId" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ProductId" />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Price</label>
+        <input asp-for="Price" class="form-control" type="number" step="0.01" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Stock</label>
+        <input asp-for="StockQuantity" class="form-control" type="number" />
+        <span asp-validation-for="StockQuantity" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Type</label>
+        <select asp-for="ProductTypeId" class="form-select">
+            @foreach (var t in Model.Types)
+            {
+                <option value="@t.Id" selected="@(t.Id == Model.ProductTypeId)">@t.Name</option>
+            }
+        </select>
+        <span asp-validation-for="ProductTypeId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Photo</label>
+        <input class="form-control" type="file" name="image" accept="image/*" />
+        <div class="form-text">Поддерживаются JPG/PNG/GIF.</div>
+    </div>
+
+    @if (Model.MainPictureId.HasValue)
+    {
+        <div class="mb-3">
+            <img src="@Url.Action("ProductImage", "Media", new { id = Model.MainPictureId })"
+                 class="img-thumbnail" style="max-width:240px" alt="Current photo" />
+        </div>
+    }
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+@if (Model.MainPictureId.HasValue)
+{
+    <form class="mt-2"
+          asp-action="DeletePicture"
+          asp-route-productId="@Model.ProductId"
+          asp-route-picId="@Model.MainPictureId"
+          method="post">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('Delete this photo?')">
+            <i class="bi bi-trash"></i> Delete photo
+        </button>
+    </form>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

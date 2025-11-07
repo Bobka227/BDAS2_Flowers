@@ -10,7 +10,7 @@
 
     public class AdminOrderRowVm
     {
-        public string OrderNo { get; set; } = null!;   // например: "ORD-000014"
+        public string OrderNo { get; set; } = null!; 
         public DateTime OrderDate { get; set; }
         public string Status { get; set; } = null!;
         public string Delivery { get; set; } = null!;

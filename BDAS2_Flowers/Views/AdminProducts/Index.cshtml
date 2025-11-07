@@ -1,0 +1,88 @@
+﻿@model List<(int Id, string Title, string TypeName, int Stock, decimal Price, int TypeId)>
+
+@{
+    ViewData["Title"] = "Products";
+    var typeOptions = (IEnumerable<(int Id, string Name)>)(ViewBag.Types ?? Enumerable.Empty<(int, string)>());
+}
+
+<div class="d-flex align-items-center gap-2">
+    @if (typeOptions.Any())
+    {
+        <form asp-action="Restock" method="post" class="row g-2 align-items-center">
+            @Html.AntiForgeryToken()
+            <div class="col-auto">
+                <select name="typeId" class="form-select form-select-sm" style="min-width: 220px">
+                    <option value="" disabled selected>Choose type…</option>
+                    @foreach (var t in typeOptions)
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <input name="delta" type="number" class="form-control form-control-sm" placeholder="Δ stock (např. 25)" style="width: 180px" />
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-outline-secondary btn-brand-second btn-sm">
+                    <i class="bi bi-box-seam"></i> Restock
+                </button>
+            </div>
+        </form>
+    }
+    <a class="btn btn-primary" asp-action="Create">Add product</a>
+</div>
+
+@if (TempData["Msg"] != null)
+{
+    <div class="alert alert-info">@TempData["Msg"]</div>
+}
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th class="text-end">Stock</th>
+            <th class="text-end">Price</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var x in Model)
+        {
+            <tr>
+                <td>@x.Title</td>
+                <td>@x.TypeName</td>
+                <td class="text-end">@x.Stock</td>
+                <td class="text-end">@x.Price.ToString("0.00")</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@x.Id">Edit</a>
+
+                    @if (x.Title?.StartsWith("~~ARCHIVED~~ ") == true)
+                    {
+                        <form asp-action="Unarchive" asp-route-id="@x.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-archive-fill"></i> Unarchive
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="Archive" asp-route-id="@x.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-archive"></i> Archive
+                            </button>
+                        </form>
+                    }
+
+                    <form asp-action="Delete" asp-route-id="@x.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

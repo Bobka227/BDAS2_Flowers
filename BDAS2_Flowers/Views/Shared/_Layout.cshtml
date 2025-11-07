@@ -58,6 +58,11 @@
                         <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Admin" asp-action="Index">
                             <i class="bi bi-speedometer2"></i> Admin
                         </a>
+
+                        <a class="btn btn-outline-secondary btn-brand-second ms-2"
+                           asp-controller="AdminProducts" asp-action="Index">
+                            <i class="bi bi-box-seam"></i> Products
+                        </a>
                     }
                     @if (User.Identity?.IsAuthenticated == true)
                     {

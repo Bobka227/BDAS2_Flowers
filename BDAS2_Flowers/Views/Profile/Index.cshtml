@@ -115,6 +115,7 @@
                                 <table class="table align-middle">
                                     <thead>
                                         <tr>
+                                            <th>Čislo objednávky</th>
                                             <th>Datum</th>
                                             <th>Status</th>
                                             <th>Doručení</th>
@@ -137,6 +138,7 @@
                                                 _ => "badge rounded-pill bg-light text-dark"
                                             };
                                             <tr>
+                                                <td class="fw-semibold">@o.OrderNo</td>
                                                 <td>@o.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
                                                 <td><span class="@badge">@o.Status</span></td>
                                                 <td>@o.Delivery</td>
