@@ -13,17 +13,37 @@ public class AdminProductsController : Controller
     public AdminProductsController(IDbFactory db) => _db = db;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q, int? typeId)
     {
         var rows = new List<(int Id, string Title, string TypeName, int Stock, decimal Price, int TypeId)>();
+
         await using var conn = await _db.CreateOpenAsync();
 
         ViewBag.Types = await LoadTypesAsync(conn);
 
-        await using var cmd = new OracleCommand(@"
+        ViewBag.Query = q;
+        ViewBag.TypeId = typeId;
+
+        var sql = @"
         SELECT ID, TITLE, TYPE_NAME, STOCK, PRICE, TYPE_ID
           FROM VW_ADMIN_PRODUCTS
-         ORDER BY TITLE", (OracleConnection)conn);
+         WHERE 1=1";
+
+        var cmd = new OracleCommand { Connection = (OracleConnection)conn, BindByName = true };
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            sql += " AND UPPER(TITLE) LIKE UPPER('%' || :q || '%')";
+            cmd.Parameters.Add("q", OracleDbType.Varchar2).Value = q.Trim();
+        }
+        if (typeId.HasValue && typeId.Value > 0)
+        {
+            sql += " AND TYPE_ID = :tid";
+            cmd.Parameters.Add("tid", OracleDbType.Int32).Value = typeId.Value;
+        }
+
+        sql += " ORDER BY TITLE";
+        cmd.CommandText = sql;
 
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
@@ -41,6 +61,47 @@ public class AdminProductsController : Controller
         return View(rows);
     }
 
+
+    [HttpGet("list")]
+    public async Task<IActionResult> List(string? q, int? typeId)
+    {
+        var rows = new List<(int Id, string Title, string TypeName, int Stock, decimal Price, int TypeId)>();
+
+        await using var conn = await _db.CreateOpenAsync();
+        var sql = @"SELECT ID, TITLE, TYPE_NAME, STOCK, PRICE, TYPE_ID
+                  FROM VW_ADMIN_PRODUCTS
+                 WHERE 1=1";
+        var cmd = new OracleCommand { Connection = (OracleConnection)conn, BindByName = true };
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            sql += " AND UPPER(TITLE) LIKE UPPER('%' || :q || '%')";
+            cmd.Parameters.Add("q", OracleDbType.Varchar2).Value = q.Trim();
+        }
+        if (typeId.HasValue && typeId.Value > 0)
+        {
+            sql += " AND TYPE_ID = :tid";
+            cmd.Parameters.Add("tid", OracleDbType.Int32).Value = typeId.Value;
+        }
+
+        sql += " ORDER BY TITLE";
+        cmd.CommandText = sql;
+
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            rows.Add((
+                r.GetInt32(0),
+                r.GetString(1),
+                r.IsDBNull(2) ? "" : r.GetString(2),
+                r.GetInt32(3),
+                (decimal)r.GetDecimal(4),
+                r.GetInt32(5)
+            ));
+        }
+
+        return PartialView("_ProductsTable", rows);
+    }
 
 
 

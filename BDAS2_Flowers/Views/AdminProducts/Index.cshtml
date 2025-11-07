@@ -3,33 +3,47 @@
 @{
     ViewData["Title"] = "Products";
     var typeOptions = (IEnumerable<(int Id, string Name)>)(ViewBag.Types ?? Enumerable.Empty<(int, string)>());
+    var q = (string)(ViewBag.Query ?? "");
+    int? curType = ViewBag.TypeId as int?;
 }
 
-<div class="d-flex align-items-center gap-2">
-    @if (typeOptions.Any())
-    {
-        <form asp-action="Restock" method="post" class="row g-2 align-items-center">
-            @Html.AntiForgeryToken()
-            <div class="col-auto">
-                <select name="typeId" class="form-select form-select-sm" style="min-width: 220px">
-                    <option value="" disabled selected>Choose type…</option>
-                    @foreach (var t in typeOptions)
-                    {
-                        <option value="@t.Id">@t.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <input name="delta" type="number" class="form-control form-control-sm" placeholder="Δ stock (např. 25)" style="width: 180px" />
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-outline-secondary btn-brand-second btn-sm">
-                    <i class="bi bi-box-seam"></i> Restock
-                </button>
-            </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Products</h2>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+
+        <form id="filterForm" class="d-flex align-items-center gap-2" onsubmit="return false">
+            <select id="filterType" class="form-select form-select-sm" style="min-width:220px">
+                <option value="0">Choose type...</option>
+                @foreach (var t in typeOptions)
+                {
+                    <option value="@t.Id" selected="@(curType == t.Id)">@t.Name</option>
+                }
+            </select>
+
+            <input id="filterQ" value="@q" class="form-control form-control-sm"
+                   placeholder="Search title..." style="width:180px" />
+
+            <a class="btn btn-light btn-sm" href="@Url.Action("Index", "AdminProducts")">Reset</a>
         </form>
-    }
-    <a class="btn btn-primary" asp-action="Create">Add product</a>
+
+        <form asp-action="Restock" method="post" class="d-flex align-items-center gap-2">
+            @Html.AntiForgeryToken()
+            <select name="typeId" class="form-select form-select-sm" style="min-width:220px">
+                @foreach (var t in typeOptions)
+                {
+                    <option value="@t.Id">@t.Name</option>
+                }
+            </select>
+            <input name="delta" type="number" class="form-control form-control-sm"
+                   placeholder="Δ stock (např. 25)" style="width:160px" />
+            <button class="btn btn-outline-secondary btn-brand-second btn-sm">
+                <i class="bi bi-box-seam"></i> Restock
+            </button>
+        </form>
+
+        <a class="btn btn-primary" asp-action="Create">Add product</a>
+    </div>
 </div>
 
 @if (TempData["Msg"] != null)
@@ -37,52 +51,29 @@
     <div class="alert alert-info">@TempData["Msg"]</div>
 }
 
-<table class="table table-striped align-middle">
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Type</th>
-            <th class="text-end">Stock</th>
-            <th class="text-end">Price</th>
-            <th class="text-end">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var x in Model)
-        {
-            <tr>
-                <td>@x.Title</td>
-                <td>@x.TypeName</td>
-                <td class="text-end">@x.Stock</td>
-                <td class="text-end">@x.Price.ToString("0.00")</td>
-                <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@x.Id">Edit</a>
+<div id="grid">
+    @await Html.PartialAsync("_ProductsTable", Model)
+</div>
 
-                    @if (x.Title?.StartsWith("~~ARCHIVED~~ ") == true)
-                    {
-                        <form asp-action="Unarchive" asp-route-id="@x.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-archive-fill"></i> Unarchive
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <form asp-action="Archive" asp-route-id="@x.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button class="btn btn-sm btn-outline-warning">
-                                <i class="bi bi-archive"></i> Archive
-                            </button>
-                        </form>
-                    }
+@section Scripts {
+    <script>
+        (function(){
+          const sel = document.getElementById('filterType');
+          const q   = document.getElementById('filterQ');
+          const grid= document.getElementById('grid');
 
-                    <form asp-action="Delete" asp-route-id="@x.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')">Delete</button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+          async function reload() {
+            const p = new URLSearchParams();
+            if (sel.value && sel.value !== "0") p.set('typeId', sel.value);
+            if (q.value) p.set('q', q.value);
+            const res = await fetch('/admin/products/list?' + p.toString(),
+              { headers: {'X-Requested-With':'XMLHttpRequest'}});
+            grid.innerHTML = await res.text();
+          }
+
+          let t=null;
+          q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(reload, 250); });
+          sel.addEventListener('change', reload);
+        })();
+    </script>
+}
