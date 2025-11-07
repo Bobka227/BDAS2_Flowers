@@ -104,19 +104,99 @@
                 <div class="card shadow-sm border-0 rounded-4 profile-card">
                     <div class="card-body">
                         <h2 class="h5 mb-3">Moje objednávky</h2>
-                        <p class="text-muted mb-0">Тут позже выведем список заказов из базы.</p>
+
+                        @if (Model.Orders == null || !Model.Orders.Any())
+                        {
+                            <div class="alert alert-info mb-0">Zatím nemáte žádné objednávky.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Čislo objednávky</th>
+                                            <th>Datum</th>
+                                            <th>Status</th>
+                                            <th>Doručení</th>
+                                            <th>Prodejna</th>
+                                            <th class="text-end">Celkem</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var o in Model.Orders)
+                                        {
+                                            var badge =
+                                            (o.Status?.ToUpperInvariant()) switch
+                                            {
+                                                "PENDING" => "badge rounded-pill bg-warning text-dark",
+                                                "SHIPPED" => "badge rounded-pill bg-info text-dark",
+                                                "DELIVERED" => "badge rounded-pill bg-success",
+                                                "CANCELLED" => "badge rounded-pill bg-secondary",
+                                                "RETURNED" => "badge rounded-pill bg-danger",
+                                                _ => "badge rounded-pill bg-light text-dark"
+                                            };
+                                            <tr>
+                                                <td class="fw-semibold">@o.OrderNo</td>
+                                                <td>@o.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                                <td><span class="@badge">@o.Status</span></td>
+                                                <td>@o.Delivery</td>
+                                                <td>@o.Shop</td>
+                                                <td class="text-end">@o.Total.ToString("0 Kč")</td>
+                                                <td class="text-end">
+                                                    <a class="btn btn-sm btn-outline-primary" href="/orders/@o.OrderId">Detail</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
+
 
             <div class="tab-pane fade" id="tab-addresses">
                 <div class="card shadow-sm border-0 rounded-4 profile-card">
                     <div class="card-body">
                         <h2 class="h5 mb-3">Adresy</h2>
-                        <p class="text-muted mb-0">Здесь будет управление адресами доставки.</p>
+
+                        @if (Model.Addresses == null || !Model.Addresses.Any())
+                        {
+                            <div class="alert alert-info mb-0">
+                                Zatím nemáte žádné adresy. Adresa se uloží při vytvoření objednávky.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Adresa</th>
+                                            <th>Poslední použití</th>
+                                            <th class="text-end">Objednávek</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var a in Model.Addresses)
+                                        {
+                                            <tr>
+                                                <td>@a.Line</td>
+                                                <td>@a.LastUsed.ToString("dd.MM.yyyy HH:mm")</td>
+                                                <td class="text-end">@a.UsedCount</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
+
 
             <div class="tab-pane fade" id="tab-email">
                 <div class="card shadow-sm border-0 rounded-4 profile-card">

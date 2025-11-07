@@ -1,0 +1,51 @@
+﻿@model List<(int Id, string Title, string TypeName, int Stock, decimal Price, int TypeId)>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th class="text-end">Stock</th>
+            <th class="text-end">Price</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var x in Model)
+        {
+            <tr>
+                <td>@x.Title</td>
+                <td>@x.TypeName</td>
+                <td class="text-end">@x.Stock</td>
+                <td class="text-end">@x.Price.ToString("0.00")</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@x.Id">Edit</a>
+
+                    @if (x.Title?.StartsWith("~~ARCHIVED~~ ") == true)
+                    {
+                        <form asp-action="Unarchive" asp-route-id="@x.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-archive-fill"></i> Unarchive
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="Archive" asp-route-id="@x.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-archive"></i> Archive
+                            </button>
+                        </form>
+                    }
+
+                    <form asp-action="Delete" asp-route-id="@x.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

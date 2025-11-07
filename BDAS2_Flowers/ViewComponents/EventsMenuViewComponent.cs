@@ -16,14 +16,12 @@ public class EventsMenuViewComponent : ViewComponent
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
 
+        // TODO TO VIEW
+        // Hotovo
         cmd.CommandText = onlyUsed
-            ? @"SELECT et.eventtypeid, et.eventname
-                  FROM event_type et
-                 WHERE EXISTS (SELECT 1 FROM event e WHERE e.eventtypeid = et.eventtypeid)
-                 ORDER BY et.eventname"
-            : @"SELECT eventtypeid, eventname
-                  FROM event_type
-                 ORDER BY eventname";
+          ? @"SELECT eventtypeid, eventname FROM VW_EVENT_TYPES_USED ORDER BY eventname"
+          : @"SELECT eventtypeid, eventname FROM event_type ORDER BY eventname";
+
 
         await using var r = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
         while (await r.ReadAsync())

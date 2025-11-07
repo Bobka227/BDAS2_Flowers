@@ -1,0 +1,45 @@
+﻿@using BDAS2_Flowers.Models.ViewModels
+
+@{
+    ViewData["Title"] = "Objednávky uživatele";
+}
+<div class="container py-4">
+  @if (TempData["Msg"] is string m) { <div class="alert alert-info">@m</div> }
+
+  <h1 class="h4 mb-3">@Model.FullName (@Model.Email)</h1>
+
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>Objednávka</th><th>Datum</th><th>Status</th><th>Doručení</th><th>Prodejna</th>
+        <th class="text-end">Celkem</th><th class="text-end">Akce</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach (var o in Model.Orders)
+    {
+      <tr>
+        <td>@o.OrderNo</td>
+        <td>@o.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+        <td><span class="badge bg-warning text-dark">@o.Status</span></td>
+        <td>@o.Delivery</td>
+        <td>@o.Shop</td>
+        <td class="text-end">@o.Total.ToString("0 Kč")</td>
+        <td class="text-end">
+          <form method="post" action="/admin/orders/@o.OrderNo/status" class="d-inline">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnEmail" value="@Model.Email" />
+            <select name="statusName" class="form-select form-select-sm d-inline-block" style="width: 170px" required>
+              @foreach (var s in Model.StatusNames)
+              {
+                <option value="@s" selected="@(s == o.Status ? "selected" : null)">@s</option>
+              }
+            </select>
+            <button class="btn btn-primary btn-sm ms-2" type="submit">Uložit</button>
+          </form>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>

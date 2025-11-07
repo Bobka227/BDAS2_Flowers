@@ -9,5 +9,15 @@
         }
         <div class="mt-1 text-muted">@Model.PriceFrom.ToString("0 Kč")</div>
     </div>
-    <div class="action"><a class="btn btn-brand w-100" href="#">Výběr možností</a></div>
+
+    <div class="action">
+        <form method="post" asp-controller="Cart" asp-action="Add" class="w-100">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="productId" value="@Model.ProductId" />
+            <input type="hidden" name="quantity" value="1" />
+            <button type="submit" class="btn btn-brand w-100">
+                <i class="bi bi-bag"></i> Přidat do košíku
+            </button>
+        </form>
+    </div>
 </div>

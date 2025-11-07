@@ -1,0 +1,77 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.CartVm
+@{
+    ViewData["Title"] = "Košík";
+}
+
+<h2 class="mb-3">Košík</h2>
+
+@if (!string.IsNullOrEmpty(TempData["Error"] as string))
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">Váš košík je prázdný.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Produkt</th>
+                    <th style="width:220px" class="text-center">Množství</th>
+                    <th class="text-end">Cena</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var i in Model.Items)
+                {
+                    <tr>
+                        <td>@i.Title</td>
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                <form method="post" asp-action="Dec" asp-controller="Cart" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@i.ProductId" />
+                                    <button type="submit" class="btn btn-outline-secondary">−</button>
+                                </form>
+                                <span class="px-3 align-self-center">@i.Quantity</span>
+                                <form method="post" asp-action="Inc" asp-controller="Cart" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@i.ProductId" />
+                                    <button type="submit" class="btn btn-outline-secondary">+</button>
+                                </form>
+                            </div>
+                        </td>
+                        <td class="text-end">@i.LineTotal.ToString("0 Kč")</td>
+                        <td class="text-end">
+                            <form method="post" asp-action="Remove" asp-controller="Cart" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@i.ProductId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Smazat</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="2" class="text-end">Celkem:</th>
+                    <th class="text-end">@Model.Total.ToString("0 Kč")</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <form method="post" asp-controller="Cart" asp-action="Clear" class="m-0">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-secondary">Vyprázdnit košík</button>
+        </form>
+        <a class="btn btn-primary" href="/orders/create">Pokračovat k objednávce</a>
+    </div>
+}

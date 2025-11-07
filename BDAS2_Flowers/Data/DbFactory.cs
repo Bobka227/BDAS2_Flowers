@@ -1,20 +1,53 @@
 ﻿using System.Data;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Data
 {
-    public interface IDbFactory { Task<OracleConnection> CreateOpenAsync(); }
+    public interface IDbFactory
+    {
+        Task<OracleConnection> CreateOpenAsync();
+    }
 
     public class OracleDbFactory : IDbFactory
     {
         private readonly OracleConnectionStringBuilder _csb;
-        public OracleDbFactory(OracleConnectionStringBuilder csb) => _csb = csb;
+        private readonly IHttpContextAccessor _http;   
+
+        public OracleDbFactory(OracleConnectionStringBuilder csb, IHttpContextAccessor http)
+        {
+            _csb = csb;
+            _http = http;
+        }
+
         public async Task<OracleConnection> CreateOpenAsync()
         {
-            var c = new OracleConnection(_csb.ConnectionString);
-            await c.OpenAsync();
-            return c;
+            var con = new OracleConnection(_csb.ConnectionString);
+
+            await con.OpenAsync();
+
+            var actor = ResolveActor(); 
+            await using (var cmd = new OracleCommand("begin dbms_session.set_identifier(:id); end;", con))
+            {
+                cmd.BindByName = true;
+                cmd.Parameters.Add("id", OracleDbType.Varchar2, 100).Value = actor;
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            return con;
+        }
+
+        private string ResolveActor()
+        {
+            var user = _http.HttpContext?.User;
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                return user.Identity!.Name
+                       ?? user.FindFirst("email")?.Value
+                       ?? user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                       ?? "app";
+            }
+            return "app";
         }
     }
 
