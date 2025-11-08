@@ -281,3 +281,14 @@ body::before {
     max-height: 60vh;
     overflow: auto;
 }
+
+.status-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .5rem;
+}
+
+.status-actions .btn {
+    min-width: 110px;
+}
