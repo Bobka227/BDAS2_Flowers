@@ -234,7 +234,7 @@ public class AdminProductsController : Controller
     {
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = new OracleCommand(@"
-        SELECT PRODUCTID, NAME, PRICE, STOCKQUANTITY, PRODUCTTYPEID, MAINPICID
+        SELECT *
           FROM VW_PRODUCT_EDIT
          WHERE PRODUCTID = :id", (OracleConnection)conn);
         cmd.Parameters.Add(new OracleParameter("id", id));

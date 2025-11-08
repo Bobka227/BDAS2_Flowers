@@ -1,0 +1,90 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.LogsPageVm
+@{
+    ViewData["Title"] = "Admin panel";
+}
+
+<div class="container py-3">
+    <h2 class="mb-3">Admin panel</h2>
+    <div class="alert alert-info" style="color: #385752; background-color: #A1B4A5; border: 2px solid #385752;">
+        Přihlášený uživatel: <strong>@User.Identity?.Name</strong><br/>
+        Role: <strong>@string.Join(", ", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value))</strong>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-lg-5">
+            <div class="card rounded-4 shadow-sm">
+                <div class="card-header fw-semibold">Správa</div>
+                <div class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" href="/admin/users">
+                        Správa uživatelů
+                    </a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="AdminProducts" asp-action="Index">Produkty</a>
+
+                    <a class="list-group-item list-group-item-action" href="/admin/product-types">
+                        Typy produktů
+                    </a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Orders" asp-action="Index">Objednávky</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Statuses" asp-action="Index">Statusy</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="DeliveryMethods" asp-action="Index">Delivery methods</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Shops" asp-action="Index">Prodejny</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="EventTypes" asp-action="Index">Typy událostí</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Events" asp-action="Index">Události</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Pictures" asp-action="Index">Obrázky</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Addresses" asp-action="Index">Adresy</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Payments" asp-action="Index">Platby</a>
+
+                    <a class="list-group-item list-group-item-action"
+                       asp-controller="Roles" asp-action="Index">Role</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card rounded-4 shadow-sm">
+
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">System logs</span>
+                    <small class="text-muted">Celkem: @Model.Total</small>
+                </div>
+
+                <div id="logs-container">
+                    @await Html.PartialAsync("/Views/AdminPanel/_LogsTable.cshtml", Model)
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+      document.addEventListener("click", function (e) {
+          const link = e.target.closest("[data-log-page]");
+          if (!link) return;
+          e.preventDefault();
+          const url = link.getAttribute("href");
+          fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" }})
+            .then(r => r.text())
+            .then(html => document.getElementById("logs-container").innerHTML = html);
+      });
+    </script>
+}

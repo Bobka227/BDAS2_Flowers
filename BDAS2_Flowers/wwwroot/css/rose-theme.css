@@ -1,6 +1,6 @@
 ﻿:root {
     --brand: #F5B8B6;
-    --brand-100: #DBD3D1;
+    --brand-100: #FFFFFF;
     --brand-contrast: #A56266;
     --accent-dark: #385752;
     --accent-soft: #A1B4A5;
@@ -276,3 +276,8 @@ body::before {
         color: var(--accent-dark) !important;
         text-decoration-thickness: 2px;
     }
+
+.card #logs-container {
+    max-height: 60vh;
+    overflow: auto;
+}
