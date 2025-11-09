@@ -1,0 +1,81 @@
+﻿@model List<(int Id, string Name, string? Description)>
+@{
+    ViewData["Title"] = "Typy událostí";
+}
+<div class="container py-4">
+    @if (TempData["Err"] is string err)
+    {
+        <div class="alert alert-danger">@err</div>
+    }
+    else if (TempData["Msg"] is string msg)
+    {
+        <div class="alert alert-success">@msg</div>
+    }
+
+  <h1 class="h4 mb-3">Typy událostí</h1>
+
+  <form method="post" asp-action="Create" class="row g-2 mb-3">
+        @Html.AntiForgeryToken()
+    <div class="col-12 col-lg-4"><input name="name" class="form-control" placeholder="Nový typ…" required /></div>
+    <div class="col-12 col-lg-6"><input name="description" class="form-control" placeholder="Popis (volitelné)" /></div>
+    <div class="col-12 col-lg-2"><button class="btn btn-brand w-100">Přidat</button></div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-light">
+        <tr><th>Název</th><th>Popis</th><th class="text-end">Akce</th></tr>
+      </thead>
+      <tbody>
+                @foreach (var x in Model)
+                {
+            <tr>
+              <td style="width:28%">
+                <input class="form-control et-name" value="@x.Name" data-original="@x.Name" />
+              </td>
+              <td>
+                <input class="form-control et-desc" value="@x.Description" data-original="@x.Description" />
+              </td>
+              <td class="text-end">
+                <form method="post" asp-action="Rename" class="d-inline et-form">
+                                @Html.AntiForgeryToken()
+                  <input type="hidden" name="id" value="@x.Id" />
+                  <input type="hidden" name="name" />
+                  <input type="hidden" name="description" />
+                  <button type="submit" class="btn btn-outline-secondary et-rename" disabled>Přejmenovat</button>
+                </form>
+                <form method="post" asp-action="Delete" class="d-inline ms-2">
+                                @Html.AntiForgeryToken()
+                  <input type="hidden" name="id" value="@x.Id" />
+                  <button class="btn btn-outline-danger">Smazat</button>
+                </form>
+              </td>
+            </tr>
+                }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@section Scripts {
+    <script>
+    document.addEventListener('input', function(e){
+      const row = e.target.closest('tr');
+      if(!row) return;
+      const name = row.querySelector('.et-name');
+      const desc = row.querySelector('.et-desc');
+      const btn  = row.querySelector('.et-rename');
+      const changed =
+         (name.value.trim() !== (name.getAttribute('data-original')||'').trim()) ||
+         (desc.value.trim() !== (desc.getAttribute('data-original')||'').trim());
+      btn.disabled = !changed;
+    });
+    document.addEventListener('submit', function(e){
+      const form = e.target.closest('.et-form');
+      if(!form) return;
+      const row  = form.closest('tr');
+      form.querySelector('input[name="name"]').value        = row.querySelector('.et-name').value.trim();
+      form.querySelector('input[name="description"]').value = row.querySelector('.et-desc').value.trim();
+    });
+    </script>
+}

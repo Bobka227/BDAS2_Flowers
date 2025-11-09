@@ -1,0 +1,72 @@
+﻿@model List<(int Id, string Name)>
+@{
+    ViewData["Title"] = "Způsoby doručení";
+}
+<div class="container py-4">
+    @if (TempData["Msg"] is string m)
+    {
+        <div class="alert alert-info">@m</div>
+    }
+
+  <h1 class="h4 mb-3">Statusy</h1>
+
+  <form method="post" asp-action="Create" class="row g-2 mb-3">
+        @Html.AntiForgeryToken()
+    <div class="col-12 col-md-9">
+      <input name="name" class="form-control" placeholder="Nový způsob doručení..." required />
+    </div>
+    <div class="col-12 col-md-3">
+      <button class="btn btn-brand w-100">Přidat</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-light"><tr><th>Název</th><th class="text-end">Akce</th></tr></thead>
+      <tbody>
+                @foreach (var s in Model)
+                {
+              <tr>
+                <td>
+                  <input id="name-@s.Id" class="form-control form-control-sm"
+                         value="@s.Name" data-rename-input="@s.Id" />
+                </td>
+                <td class="text-end">
+                  <div class="status-actions">
+                    <form asp-action="Rename" asp-route-id="@s.Id" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                      <input type="hidden" name="name" value="" data-rename-value="@s.Id" />
+                      <button id="btn-rename-@s.Id" class="btn btn-sm btn-brand" disabled>Přejmenovat</button>
+                    </form>
+                    <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="m-0"
+                          onsubmit="return confirm('Opravdu smazat tento způsob doručení?');">
+                                    @Html.AntiForgeryToken()
+                      <button class="btn btn-sm btn-outline-danger">Smazat</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+                }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .status-actions{ display:flex; justify-content:flex-end; align-items:center; gap:.5rem; }
+  .status-actions .btn{ min-width:110px; }
+</style>
+<script>
+document.querySelectorAll('[data-rename-input]').forEach(inp => {
+  const id = inp.dataset.renameInput;
+  const btn = document.getElementById('btn-rename-' + id);
+  const hidden = document.querySelector('[data-rename-value="' + id + '"]');
+  const original = inp.value.trim();
+  function sync(){
+    const cur = inp.value.trim();
+    hidden.value = cur;
+    btn.disabled = (cur.length===0) || (cur === original);
+  }
+  inp.addEventListener('input', sync); sync();
+});
+</script>
