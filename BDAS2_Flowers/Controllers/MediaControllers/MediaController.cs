@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 
-namespace BDAS2_Flowers.Controllers
+namespace BDAS2_Flowers.Controllers.MediaControllers
 {
     public class MediaController : Controller
     {

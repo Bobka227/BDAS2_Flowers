@@ -1,4 +1,5 @@
-﻿@model BDAS2_Flowers.Models.ViewModels.ProductEditVm
+﻿@using BDAS2_Flowers.Models.ViewModels.ProductModels
+@model ProductEditVm
 @{
     var isEdit = Model.ProductId.HasValue;
     ViewData["Title"] = isEdit ? "Edit product" : "Create product";

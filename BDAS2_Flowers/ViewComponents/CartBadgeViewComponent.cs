@@ -1,4 +1,4 @@
-﻿using BDAS2_Flowers.Models.ViewModels;
+﻿using BDAS2_Flowers.Models.ViewModels.OrderModels;
 using Microsoft.AspNetCore.Mvc;
 
 public class CartBadgeViewComponent : ViewComponent

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
-using BDAS2_Flowers.Models.ViewModels;
+using BDAS2_Flowers.Models.ViewModels.OrderModels;
 
 [Authorize]
 [Route("cart")]

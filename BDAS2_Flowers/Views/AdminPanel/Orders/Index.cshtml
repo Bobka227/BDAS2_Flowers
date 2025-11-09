@@ -1,4 +1,5 @@
-﻿@model IEnumerable<BDAS2_Flowers.Models.ViewModels.AdminOrderRowVm>
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model IEnumerable<AdminOrderRowVm>
 @{
     ViewData["Title"] = "Objednávky";
     var q = Context.Request.Query["q"].ToString();

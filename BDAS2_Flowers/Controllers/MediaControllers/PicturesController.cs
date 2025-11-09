@@ -3,7 +3,7 @@ using Oracle.ManagedDataAccess.Client;
 using BDAS2_Flowers.Data;
 using System.Data;
 
-namespace BDAS2_Flowers.Controllers
+namespace BDAS2_Flowers.Controllers.MediaControllers
 {
     public class PicturesController : Controller
     {
