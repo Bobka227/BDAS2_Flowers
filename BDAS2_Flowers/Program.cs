@@ -16,6 +16,8 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton(new OracleConnectionStringBuilder(oracleCs));
 builder.Services.AddScoped<IDbFactory, OracleDbFactory>();
+builder.Services.AddScoped<BDAS2_Flowers.Controllers.OrderControllers.IPaymentService,
+                           BDAS2_Flowers.Controllers.OrderControllers.PaymentService>();
 
 builder.Services.AddSingleton<IPasswordHasher, HmacSha256PasswordHasher>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

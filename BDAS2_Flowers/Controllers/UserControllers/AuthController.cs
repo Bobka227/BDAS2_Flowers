@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using BDAS2_Flowers.Data;
-using BDAS2_Flowers.Models.ViewModels;
 using BDAS2_Flowers.Security;
+using BDAS2_Flowers.Models.ViewModels.UserProfileModels;
 
-namespace BDAS2_Flowers.Controllers;
+namespace BDAS2_Flowers.Controllers.UserControllers;
 
 public class AuthController : Controller
 {

@@ -1,6 +1,6 @@
 using BDAS2_Flowers.Data;
 using BDAS2_Flowers.Models;
-using BDAS2_Flowers.Models.ViewModels;
+using BDAS2_Flowers.Models.ViewModels.ProductModels;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 

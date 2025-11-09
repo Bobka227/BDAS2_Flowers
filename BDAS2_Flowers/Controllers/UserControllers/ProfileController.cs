@@ -7,8 +7,9 @@ using BDAS2_Flowers.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using BDAS2_Flowers.Data;
+using BDAS2_Flowers.Models.ViewModels.UserProfileModels;
 
-namespace BDAS2_Flowers.Controllers
+namespace BDAS2_Flowers.Controllers.UserControllers
 {
     [Authorize]
     public class ProfileController : Controller
@@ -60,7 +61,7 @@ namespace BDAS2_Flowers.Controllers
                         Status = rd.GetString(3),
                         Delivery = rd.GetString(4),
                         Shop = rd.GetString(5),
-                        Total = (decimal)rd.GetDecimal(6)
+                        Total = rd.GetDecimal(6)
                     });
                 }
             }

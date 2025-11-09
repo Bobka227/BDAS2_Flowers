@@ -1,4 +1,4 @@
-﻿namespace BDAS2_Flowers.Models.ViewModels
+﻿namespace BDAS2_Flowers.Models.ViewModels.EventModels
 {
     public class EventTypeVm
     {

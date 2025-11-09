@@ -1,4 +1,4 @@
-﻿namespace BDAS2_Flowers.Models.ViewModels
+﻿namespace BDAS2_Flowers.Models.ViewModels.AdminModels
 {
     public class AdminUserOrdersVm
     {

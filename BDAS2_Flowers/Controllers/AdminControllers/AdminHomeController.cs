@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
-using BDAS2_Flowers.Models.ViewModels;
+using BDAS2_Flowers.Models.ViewModels.AdminModels;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
@@ -22,12 +22,41 @@ public class AdminHomeController : Controller
         return View("/Views/AdminPanel/Index.cshtml", logs);
     }
 
+
     [HttpGet("logs")]
     public async Task<IActionResult> Logs(int page = 1, int size = 20)
     {
         var logs = await LoadLogsAsync(page, size);
         return PartialView("/Views/AdminPanel/_LogsTable.cshtml", logs);
     }
+
+    [ValidateAntiForgeryToken]
+    [HttpPost("logs/clear-hard")]
+    public async Task<IActionResult> ClearLogsHard()
+    {
+        await using var con = await _db.CreateOpenAsync();
+        await using var cmd = new OracleCommand("BEGIN ST72861.PKG_RESET.CLEAR_LOG; END;", (OracleConnection)con)
+        { CommandType = CommandType.Text };
+        await cmd.ExecuteNonQueryAsync();
+
+        TempData["DiagOk"] = "Logy byly zcela vyprázdněny (TRUNCATE) a sekvence byla resetována.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [ValidateAntiForgeryToken]
+    [HttpPost("logs/clear-soft")]
+    public async Task<IActionResult> ClearLogsSoft()
+    {
+        await using var con = await _db.CreateOpenAsync();
+        await using var cmd = new OracleCommand("BEGIN ST72861.PKG_RESET.CLEAR_LOG(FALSE); END;", (OracleConnection)con)
+        { CommandType = CommandType.Text };
+        await cmd.ExecuteNonQueryAsync();
+
+        TempData["DiagOk"] = "Všechny záznamy logu byly smazány (DELETE) a sekvence byla resetována.";
+        return RedirectToAction(nameof(Index));
+    }
+
+
 
     private async Task<LogsPageVm> LoadLogsAsync(int page, int size)
     {
@@ -70,6 +99,7 @@ public class AdminHomeController : Controller
                 });
             }
         }
+
 
         return new LogsPageVm
         {

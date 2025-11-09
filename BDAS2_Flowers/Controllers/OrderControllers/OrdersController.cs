@@ -1,19 +1,23 @@
-﻿using BDAS2_Flowers.Models.ViewModels;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using System.Data;
 using System.Security.Claims;
 using BDAS2_Flowers.Data;
+using BDAS2_Flowers.Models.ViewModels.OrderModels;
 
-namespace BDAS2_Flowers.Controllers
+namespace BDAS2_Flowers.Controllers.OrderControllers
 {
     [Authorize]
     public class OrdersController : Controller
     {
-        private readonly IDbFactory _db;              // ⬅️ вместо IConfiguration
-        public OrdersController(IDbFactory db) => _db = db;
+
+        private readonly IPaymentService _payments;
+
+        private readonly IDbFactory _db;
+        public OrdersController(IDbFactory db, IPaymentService payments)
+        { _db = db; _payments = payments; }
 
         private const string CartKey = "CART";
 
@@ -29,7 +33,6 @@ namespace BDAS2_Flowers.Controllers
                 Items = new List<OrderItemVm>()
             };
 
-            // все справочники через фабрику
             vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT Id, Name FROM VW_DELIVERY_METHODS");
             vm.Shops = await LoadIdNameAsync(@"SELECT ShopId AS Id, Name AS Name FROM FLOWER_SHOP");
             vm.Addresses = await LoadIdNameAsync(@"SELECT AddressId AS Id, Street || ' ' || HouseNumber || ', ' || PostalCode AS Name FROM ADDRESS");
@@ -54,31 +57,25 @@ namespace BDAS2_Flowers.Controllers
                 return Redirect("/orders/create");
             }
 
-            await using var con = await _db.CreateOpenAsync(); 
+            await using var con = await _db.CreateOpenAsync();
             await using var tx = con.BeginTransaction();
 
             try
             {
-                var pendingId = await GetPendingStatusIdAsync(con); 
-
+                var pendingId = await GetPendingStatusIdAsync(con);
                 var type = (vm.PaymentType ?? "cash").ToLowerInvariant();
 
-                int paymentId;
-                await using (var cmd = new OracleCommand("PRC_CREATE_PAYMENT", con)
-                { CommandType = CommandType.StoredProcedure, Transaction = tx })
-                {
-                    cmd.Parameters.Add("p_user_id", OracleDbType.Int32).Value = CurrentUserId;
-                    cmd.Parameters.Add("p_type", OracleDbType.Varchar2, 10).Value = type;
-                    var o = new OracleParameter("o_payment_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
-                    cmd.Parameters.Add(o);
-                    await cmd.ExecuteNonQueryAsync();
-                    paymentId = Convert.ToInt32(o.Value.ToString());
-                }
+                // === ПЛАТЕЖ ЧЕРЕЗ СЕРВИС ===
+                var paymentId = await _payments.CreatePaymentAsync(con, tx, CurrentUserId, type);
+                if (type == "card" && !string.IsNullOrWhiteSpace(vm.CardNumber))
+                    await _payments.AttachCardAsync(con, tx, paymentId, vm.CardNumber);
+                else if (type == "cash")
+                    await _payments.AttachCashAsync(con, tx, paymentId, vm.CashAccepted ?? 0m);
 
                 int addressId;
                 var wantsNewAddress =
                     vm.UseNewAddress ||
-                    (!string.IsNullOrWhiteSpace(vm.Street) && vm.HouseNumber > 0 && vm.PostalCode > 0);
+                    !string.IsNullOrWhiteSpace(vm.Street) && vm.HouseNumber > 0 && vm.PostalCode > 0;
 
                 if (wantsNewAddress)
                 {
@@ -144,6 +141,13 @@ namespace BDAS2_Flowers.Controllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
+                if (type == "cash")
+                {
+                    var amount = await _payments.GetAmountAsync(con, tx, paymentId);
+                    var change = Math.Max(0, (vm.CashAccepted ?? 0m) - amount);
+                    await _payments.SetCashChangeAsync(con, tx, paymentId, change);
+                }
+
                 await tx.CommitAsync();
                 HttpContext.Session.Remove(CartKey);
                 TempData["OrderOk"] = "Objednávka byla vytvořena.";
@@ -156,6 +160,7 @@ namespace BDAS2_Flowers.Controllers
                 return Redirect("/orders/create");
             }
         }
+
 
         [HttpGet("/orders/{id:int}")]
         public async Task<IActionResult> Details(int id)
@@ -179,8 +184,28 @@ namespace BDAS2_Flowers.Controllers
                 model.Status = rd.GetString(3);
                 model.Delivery = rd.GetString(4);
                 model.Shop = rd.GetString(5);
-                model.Total = (decimal)rd.GetDecimal(6);
+                model.Total = rd.GetDecimal(6);
             }
+
+            await using (var cmd = new OracleCommand(@"
+            SELECT PAYMENT_TYPE, AMOUNT, CARD_LAST4, CASH_ACCEPTED, CASH_RETURNED, CUPON_BONUS, CUPON_EXPIRY
+            FROM VW_ORDER_PAYMENT
+            WHERE ORDERID = :id", con))
+            {
+                cmd.Parameters.Add(new OracleParameter("id", id));
+                await using var rd = await cmd.ExecuteReaderAsync();
+                if (await rd.ReadAsync())
+                {
+                    model.PaymentType = rd.GetString(0);
+                    model.Amount = rd.IsDBNull(1) ? 0m : rd.GetDecimal(1);
+                    model.CardLast4 = rd.IsDBNull(2) ? (int?)null : rd.GetInt32(2);
+                    model.CashAccepted = rd.IsDBNull(3) ? (decimal?)null : rd.GetDecimal(3);
+                    model.CashReturned = rd.IsDBNull(4) ? (decimal?)null : rd.GetDecimal(4);
+                    model.CuponBonus = rd.IsDBNull(5) ? (decimal?)null : rd.GetDecimal(5);
+                    model.CuponExpiry = rd.IsDBNull(6) ? (DateTime?)null : rd.GetDateTime(6);
+                }
+            }
+
 
             model.Items = new List<OrderItemDetailsVm>();
             await using (var cmd = new OracleCommand(@"
@@ -198,8 +223,8 @@ namespace BDAS2_Flowers.Controllers
                         ProductId = rd.GetInt32(0),
                         ProductName = rd.GetString(1),
                         Quantity = rd.GetInt32(2),
-                        UnitPrice = (decimal)rd.GetDecimal(3),
-                        LineTotal = (decimal)rd.GetDecimal(4)
+                        UnitPrice = rd.GetDecimal(3),
+                        LineTotal = rd.GetDecimal(4)
                     });
                 }
             }

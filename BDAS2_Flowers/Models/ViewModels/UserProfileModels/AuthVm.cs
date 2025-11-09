@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BDAS2_Flowers.Models.ViewModels;
+namespace BDAS2_Flowers.Models.ViewModels.UserProfileModels;
 
 public class RegisterVm
 {
