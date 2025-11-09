@@ -1,0 +1,42 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.LogsPageVm
+<div class="table-responsive">
+  <table class="table align-middle table-sm mb-0">
+    <thead class="table-light">
+      <tr>
+        <th style="width:110px">Date</th>
+        <th>Operation</th>
+        <th>Table</th>
+        <th>User</th>
+        <th>Old Value</th>
+        <th>New Value</th>
+      </tr>
+    </thead>
+    <tbody>
+            @foreach (var x in Model.Items)
+            {
+          <tr>
+            <td>@x.ModificationDate.ToString("yyyy-MM-dd HH:mm")</td>
+            <td>@x.OperationName</td>
+            <td>@x.TableName</td>
+            <td>@x.ModificationBy</td>
+            <td class="text-break">@x.OldValues</td>
+            <td class="text-break">@x.NewValues</td>
+          </tr>
+            }
+    </tbody>
+  </table>
+</div>
+
+<div class="d-flex justify-content-between align-items-center p-2">
+  <div>
+    Page @Model.PageIndex of @Model.TotalPages
+  </div>
+  <div class="btn-group">
+        @{
+            string? prev = Model.PageIndex > 1 ? $"/admin/logs?page={Model.PageIndex - 1}&size={Model.PageSize}" : null;
+            string? next = Model.PageIndex < Model.TotalPages ? $"/admin/logs?page={Model.PageIndex + 1}&size={Model.PageSize}" : null;
+        }
+    <a class="btn btn-outline-secondary @(prev==null?"disabled":"")" href="@(prev ?? "#")" data-log-page>← Prev</a>
+    <a class="btn btn-outline-secondary @(next==null?"disabled":"")" href="@(next ?? "#")" data-log-page>Next →</a>
+  </div>
+</div>

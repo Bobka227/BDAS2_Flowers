@@ -1,0 +1,76 @@
+﻿@model List<(int Id, string Name)>
+@{
+    ViewData["Title"] = "Prodejny";
+}
+<div class="container py-4">
+    @if (TempData["Err"] is string err)
+    {
+        <div class="alert alert-danger">@err</div>
+    }
+    else if (TempData["Msg"] is string m)
+    {
+        <div class="alert alert-success">@m</div>
+    }
+
+    <h1 class="h4 mb-3">Prodejny</h1>
+
+    <form method="post" asp-action="Create" class="row g-2 mb-3">
+        @Html.AntiForgeryToken()
+        <div class="col-12 col-lg-6">
+            <input name="name" class="form-control" placeholder="Nová prodejna…" required />
+        </div>
+        <div class="col-12 col-lg-4">
+            <input name="phone" class="form-control" placeholder="Telefon (např. 123456789)"
+                   required pattern="[\+\d][\d\s\-\(\)]{5,}" />
+        </div>
+        <div class="col-12 col-lg-2">
+            <button class="btn btn-brand w-100">Přidat</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead class="table-light">
+          <tr><th>Název</th><th class="text-end">Akce</th></tr>
+        </thead>
+        <tbody>
+                @foreach (var s in Model)
+                {
+              <tr>
+                <td>
+                  <form method="post" asp-action="Rename" class="d-flex gap-2 rename-form">
+                                @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@s.Id" />
+                    <input name="name" class="form-control shop-name"
+                           value="@s.Name" data-original="@s.Name" />
+                    <button type="submit" class="btn btn-outline-secondary rename-btn" disabled>
+                      Přejmenovat
+                    </button>
+                  </form>
+                </td>
+                <td class="text-end">
+                  <form method="post" asp-action="Delete" class="d-inline">
+                                @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@s.Id" />
+                    <button class="btn btn-outline-danger">Smazat</button>
+                  </form>
+                </td>
+              </tr>
+                }
+        </tbody>
+      </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    document.addEventListener('input', function (e) {
+      const input = e.target.closest('.shop-name');
+      if (!input) return;
+      const original = (input.getAttribute('data-original') || '').trim();
+      const changed = input.value.trim();
+      const btn = input.closest('form').querySelector('.rename-btn');
+      btn.disabled = (changed === '' || changed === original);
+    });
+    </script>
+}

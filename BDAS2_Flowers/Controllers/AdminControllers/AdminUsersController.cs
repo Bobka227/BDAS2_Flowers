@@ -1,43 +1,39 @@
 ﻿using BDAS2_Flowers.Data;
+using BDAS2_Flowers.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
-using BDAS2_Flowers.Models.ViewModels;
+
+namespace BDAS2_Flowers.Controllers.AdminControllers;
 
 [Authorize(Roles = "Admin")]
-[Route("admin")]
-public class AdminController : Controller
+[Route("admin/users")]
+public class AdminUsersController : Controller
 {
     private readonly IDbFactory _db;
-    public AdminController(IDbFactory db) => _db = db;
+    public AdminUsersController(IDbFactory db) => _db = db;
 
+    // GET /admin/users
     [HttpGet("")]
-    public IActionResult Index()
-    {
-        ViewData["Title"] = "Admin";
-        return View();
-    }
-
-    [HttpGet("users")]
-    public async Task<IActionResult> Users()
+    public async Task<IActionResult> Index()
     {
         var rows = new List<(string Email, string Name, string Role, int Orders)>();
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT
-                        FROM VW_USERS_ADMIN
-                        ORDER BY FULLNAME";
+                            FROM VW_USERS_ADMIN
+                            ORDER BY FULLNAME";
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
-            rows.Add((r.GetString(0), r.GetString(1), r.GetString(2), BDAS2_Flowers.Data.DbRead.GetInt32(r, 3)));
+            rows.Add((r.GetString(0), r.GetString(1), r.GetString(2), DbRead.GetInt32(r, 3)));
 
-        return View(rows);
+        return View("/Views/AdminPanel/Users/Users.cshtml", rows);
     }
 
-
+    // POST /admin/users/{email}/role
     [ValidateAntiForgeryToken]
-    [HttpPost("users/{email}/role")]
+    [HttpPost("{email}/role")]
     public async Task<IActionResult> SetRole(string email, string roleName)
     {
         await using var conn = await _db.CreateOpenAsync();
@@ -56,11 +52,11 @@ public class AdminController : Controller
         {
             TempData["Msg"] = "Cannot change role: " + ex.Message;
         }
-        return RedirectToAction(nameof(Users));
+        return RedirectToAction(nameof(Index));
     }
 
-
-    [HttpGet("users/{email}/orders")]
+    // GET /admin/users/{email}/orders
+    [HttpGet("{email}/orders")]
     public async Task<IActionResult> UserOrders(string email)
     {
         var vm = new AdminUserOrdersVm { Email = email, Orders = new(), StatusNames = new() };
@@ -98,7 +94,7 @@ public class AdminController : Controller
             {
                 vm.Orders.Add(new AdminOrderRowVm
                 {
-                    OrderNo = rd.GetString(0),         
+                    OrderNo = rd.GetString(0),
                     OrderDate = rd.GetDateTime(1),
                     Status = rd.GetString(2),
                     Delivery = rd.GetString(3),
@@ -108,30 +104,6 @@ public class AdminController : Controller
             }
         }
 
-
-        return View("/Views/Admin/UserOrders.cshtml", vm);
-    }
-
-    [ValidateAntiForgeryToken]
-    [HttpPost("orders/{orderNo}/status")]
-    public async Task<IActionResult> ChangeOrderStatus(string orderNo, string statusName, string returnEmail)
-    {
-        await using var conn = await _db.CreateOpenAsync();
-        await using var cmd = new OracleCommand("PRC_CHANGE_ORDER_STATUS_UI", (OracleConnection)conn)
-        { CommandType = CommandType.StoredProcedure };
-        cmd.BindByName = true;
-        cmd.Parameters.Add("p_order_no", OracleDbType.Varchar2, 50).Value = orderNo;
-        cmd.Parameters.Add("p_status_name", OracleDbType.Varchar2, 50).Value = statusName;
-        cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100).Value = User.Identity?.Name ?? "admin";
-        try
-        {
-            await cmd.ExecuteNonQueryAsync();
-            TempData["Msg"] = $"Order {orderNo} → {statusName}.";
-        }
-        catch (OracleException ex)
-        {
-            TempData["Msg"] = "Nelze změnit status: " + ex.Message;
-        }
-        return Redirect($"/admin/users/{returnEmail}/orders");
+        return View("/Views/AdminPanel/Users/UserOrders.cshtml", vm);
     }
 }

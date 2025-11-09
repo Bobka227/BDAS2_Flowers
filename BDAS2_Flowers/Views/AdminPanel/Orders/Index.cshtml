@@ -1,0 +1,83 @@
+﻿@model IEnumerable<BDAS2_Flowers.Models.ViewModels.AdminOrderRowVm>
+@{
+    ViewData["Title"] = "Objednávky";
+    var q = Context.Request.Query["q"].ToString();
+    var s = Context.Request.Query["status"].ToString();
+
+    string StatusBadge(string st) => st?.ToUpperInvariant() switch
+    {
+        "PENDING" => "bg-warning text-dark",
+        "SHIPPED" => "bg-info text-dark",
+        "DELIVERED" => "bg-success",
+        "CANCELLED" => "bg-secondary",
+        "RETURNED" => "bg-danger",
+        _ => "bg-light text-dark"
+    };
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string m)
+    {
+            <div class="alert alert-info">@m</div>
+    }
+
+    <h1 class="h4 mb-3">Objednávky</h1>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-6">
+            <input name="q" value="@q" class="form-control"
+                   placeholder="Hledat (číslo objednávky nebo zákazník)..." />
+        </div>
+        <div class="col-8 col-md-3">
+            <input name="status" value="@s" class="form-control"
+                   placeholder="Status (např. Shipped)..." />
+        </div>
+        <div class="col-4 col-md-3">
+            <button class="btn btn-brand w-100" type="submit">Filtrovat</button>
+        </div>
+    </form>
+
+    @if (!Model.Any())
+    {
+            <div class="alert alert-light border">Nenalezeny žádné objednávky.</div>
+    }
+    else
+    {
+            <div class="table-responsive">
+                <table class="table align-middle table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Objednávka</th>
+                            <th>Datum</th>
+                            <th>Zákazník</th>
+                            <th>Status</th>
+                            <th>Doručení</th>
+                            <th>Prodejna</th>
+                            <th class="text-end">Celkem</th>
+                            <th class="text-end">Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var o in Model)
+                    {
+                            <tr>
+                                <td class="fw-semibold">@o.OrderNo</td>
+                                <td>@o.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@o.Customer</td>
+                                <td><span class="badge @StatusBadge(o.Status)">@o.Status</span></td>
+                                <td>@o.Delivery</td>
+                                <td>@o.Shop</td>
+                                        <td class="text-end">@($"{o.Total:0 Kč}")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       asp-controller="AdminOrders"
+                                       asp-action="Details"
+                                       asp-route-orderNo="@o.OrderNo">Detail</a>
+                                </td>
+                            </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+    }
+</div>

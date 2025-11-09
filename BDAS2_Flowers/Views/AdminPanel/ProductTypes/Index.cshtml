@@ -1,0 +1,93 @@
+﻿@model List<(int Id, string Name)>
+@{
+    ViewData["Title"] = "Typy produktů";
+}
+<div class="container py-4">
+
+    @if (TempData["Msg"] is string msg)
+    {
+            <div class="alert alert-info">@msg</div>
+    }
+
+    <h1 class="h4 mb-3">Typy produktů</h1>
+
+    <div class="card rounded-4 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="post" action="/admin/product-types/create" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-md-6">
+                    <input name="name" class="form-control" maxlength="200" required placeholder="Nový typ…" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-brand">Přidat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Název</th>
+                <th class="text-end">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model) {
+              <tr data-original="@t.Name">
+                <td>
+                  <form method="post" action="/admin/product-types/@t.Id/rename" class="rename-form d-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                    <input name="name"
+                           class="form-control form-control-sm rename-input"
+                           value="@t.Name"
+                           />
+                    <button type="submit"
+                            class="btn btn-sm btn-secondary rename-btn"
+                            disabled>
+                      Přejmenovat
+                    </button>
+                  </form>
+                </td>
+                <td class="text-end">
+                  <form method="post" action="/admin/product-types/@t.Id/delete" onsubmit="return confirm('Smazat?')">
+                                    @Html.AntiForgeryToken()
+                    <button class="btn btn-sm btn-outline-danger">Smazat</button>
+                  </form>
+                </td>
+              </tr>
+            }
+
+            @section Scripts {
+                <script>
+                    (function () {
+                      function norm(s) { return (s || "").trim().toUpperCase(); }
+
+                      document.querySelectorAll('tr[data-original]').forEach(function (row) {
+                        const orig = row.getAttribute('data-original');
+                        const input = row.querySelector('.rename-input');
+                        const btn   = row.querySelector('.rename-btn');
+
+                        btn.disabled = (norm(input.value) === norm(orig));
+
+                        input.addEventListener('input', function () {
+                          btn.disabled = (norm(input.value) === norm(orig));
+                        });
+                      });
+
+                      document.addEventListener('submit', function (e) {
+                        const form = e.target.closest('.rename-form');
+                        if (!form) return;
+                        const row = form.closest('tr[data-original]');
+                        const orig = row.getAttribute('data-original');
+                        const input = form.querySelector('.rename-input');
+                        if (norm(input.value) === norm(orig)) {
+                          e.preventDefault();
+                        }
+                      });
+                    })();
+                </script>
+            }
+        </tbody>
+    </table>
+</div>

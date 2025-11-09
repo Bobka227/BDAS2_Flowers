@@ -20,7 +20,7 @@
 <body class="theme-rose bg-floral">
     <div class="container py-3">
 
-        <nav class="navbar navbar-expand-lg rounded-4 px-3 py-2 shadow-sm" style="background:#DBD3D1;">
+        <nav class="navbar navbar-expand-lg rounded-4 px-3 py-2 shadow-sm" style="background:#FFFFFF;">
             <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">FLOW WOW!</a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,13 +55,13 @@
                 <div class="d-flex gap-2">
                     @if (User.IsInRole("Admin"))
                     {
-                        <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Admin" asp-action="Index">
+                            <a class="btn btn-outline-secondary btn-brand-second" asp-controller="AdminHome" asp-action="Index">
                             <i class="bi bi-speedometer2"></i> Admin
                         </a>
 
                         <a class="btn btn-outline-secondary btn-brand-second ms-2"
                            asp-controller="AdminProducts" asp-action="Index">
-                            <i class="bi bi-box-seam"></i> Products
+                            <i class="bi bi-box-seam"></i> Produkty
                         </a>
                     }
                     @if (User.Identity?.IsAuthenticated == true)
