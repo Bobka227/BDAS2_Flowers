@@ -1,5 +1,5 @@
 ﻿using BDAS2_Flowers.Data;
-using BDAS2_Flowers.Models.ViewModels;
+using BDAS2_Flowers.Models.ViewModels.AdminModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
