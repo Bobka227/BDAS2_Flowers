@@ -78,7 +78,5 @@ namespace BDAS2_Flowers.Controllers.MediaControllers
             };
             return File(bytes, contentType);
         }
-
-
     }
 }

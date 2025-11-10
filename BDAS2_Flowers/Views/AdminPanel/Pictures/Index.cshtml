@@ -1,0 +1,139 @@
+﻿@model List<(int PictureId, int ProductId, string Product, string FileName, string Ext, long SizeBytes, DateTime? Uploaded, DateTime? Modified)>
+@{
+    ViewData["Title"] = "Obrázky";
+    var products = (List<(int Id, string Name)>)ViewBag.Products;
+    var exts = (List<string>)ViewBag.Exts;
+    var f = (dynamic)ViewBag.Filters;
+    string qName = f?.qName ?? "";
+    string qExt = f?.qExt ?? "";
+    string qProduct = f?.qProduct ?? "";
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string m)
+    {
+        <div class="alert alert-info">@m</div>
+    }
+
+    <h1 class="h4 mb-3">Obrázky</h1>
+
+    <form method="post" enctype="multipart/form-data" action="/admin/pictures/upload" class="row g-2 mb-4">
+        @Html.AntiForgeryToken()
+        <div class="col-12 col-lg-3">
+            <select name="productId" class="form-select" required>
+                <option value="">— Produkt —</option>
+                @foreach (var p in products)
+                {
+                    <option value="@p.Id">@p.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-lg-4">
+            <input name="name" class="form-control" placeholder="Název souboru (volitelné)" />
+        </div>
+        <div class="col-12 col-lg-3">
+            <input name="file" type="file" class="form-control" required />
+        </div>
+        <div class="col-12 col-lg-2">
+            <button class="btn btn-brand w-100">Nahrát</button>
+        </div>
+    </form>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-lg-4">
+            <input name="qProduct" value="@qProduct" class="form-control" placeholder="Hledat podle produktu…" />
+        </div>
+        <div class="col-12 col-lg-4">
+            <input name="qName" value="@qName" class="form-control" placeholder="Hledat podle názvu souboru…" />
+        </div>
+        <div class="col-6 col-lg-2">
+            <select name="qExt" class="form-select">
+                <option value="">— Ext —</option>
+                @foreach (var e in exts)
+                {
+                        <option value="@e" selected="@(e.Equals(qExt, StringComparison.OrdinalIgnoreCase))">@e</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-lg-2">
+            <button class="btn btn-outline-secondary w-100">Filtrovat</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:96px">Náhled</th>
+                    <th>Produkt / Název</th>
+                    <th>Format</th>
+                    <th>Velikost</th>
+                    <th>Nahráno</th>
+                    <th>Upraveno</th>
+                    <th class="text-end">Akce</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var x in Model)
+                    {
+                      <tr data-row="@x.PictureId" class="align-middle">
+                        <td>
+                          <img src="@($"/admin/pictures/{x.PictureId}/content")"
+                               style="width:72px;height:72px;object-fit:cover;border-radius:8px;" />
+                        </td>
+
+                        <td>
+                          <form asp-action="UpdateMeta" asp-route-id="@x.PictureId" method="post"
+                                class="m-0 d-flex flex-wrap gap-2 align-items-center" data-edit-form>
+                                                @Html.AntiForgeryToken()
+
+                            <select name="productId" class="form-select form-select-sm" data-orig="@x.ProductId" style="min-width:180px">
+                                                    @foreach (var p in (List<(int Id, string Name)>)ViewBag.Products)
+                                                    {
+                                                        <option value="@p.Id" selected="@(p.Id == x.ProductId)">@p.Name</option>
+                                                    }
+                            </select>
+
+                            <input name="name" class="form-control form-control-sm"
+                                   value="@x.FileName" data-orig="@x.FileName" style="min-width:220px" />
+
+                            <button type="submit" class="btn btn-sm btn-brand" data-save disabled>Uložit</button>
+                          </form>
+                        </td>
+
+                        <td>@x.Ext</td>
+                        <td>@x.SizeBytes B</td>
+                        <td>@(x.Uploaded?.ToString("yyyy-MM-dd HH:mm"))</td>
+                        <td>@(x.Modified?.ToString("yyyy-MM-dd HH:mm"))</td>
+
+                        <td class="text-end">
+                          <div class="d-flex gap-2 justify-content-end">
+                            <a class="btn btn-sm btn-outline-primary" href="@($"/admin/pictures/{x.PictureId}/content")" target="_blank">Otevřít</a>
+                            <form asp-action="Delete" asp-route-id="@x.PictureId" method="post" class="m-0"
+                                  onsubmit="return confirm('Smazat obrázek?');">
+                                                    @Html.AntiForgeryToken()
+                              <button type="submit" class="btn btn-sm btn-outline-danger">Smazat</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    document.querySelectorAll('[data-edit-form]').forEach(f => {
+      const prod = f.querySelector('select[name="productId"]');
+      const name = f.querySelector('input[name="name"]');
+      const btn  = f.querySelector('[data-save]');
+      const orig = { p: (prod.getAttribute('data-orig')||''), n: (name.getAttribute('data-orig')||'').trim() };
+      function sync(){ btn.disabled = !(prod.value !== orig.p || name.value.trim() !== orig.n); }
+      prod.addEventListener('change', sync);
+      name.addEventListener('input', sync);
+      sync();
+    });
+    </script>
+}
