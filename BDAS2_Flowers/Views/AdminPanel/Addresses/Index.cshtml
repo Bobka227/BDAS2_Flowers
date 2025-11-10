@@ -1,0 +1,147 @@
+﻿@model List<(int Id, string Street, int House, int Postal, DateTime? LastUsed, int UsedCount)>
+@{
+    ViewData["Title"] = "Adresy";
+    var qStreet = (string?)ViewBag.qStreet;
+    var qPostal = (int?)ViewBag.qPostal;
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string m && !string.IsNullOrWhiteSpace(m))
+    {
+        <div class="alert alert-info">@m</div>
+    }
+
+    <h1 class="h4 mb-3">Adresy</h1>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-6">
+            <input name="qStreet" value="@qStreet" class="form-control" placeholder="Hledat podle ulice…" />
+        </div>
+        <div class="col-6 col-md-3">
+            <input name="qPostal" value="@(qPostal?.ToString())" class="form-control" placeholder="PSČ" inputmode="numeric" />
+        </div>
+        <div class="col-6 col-md-3">
+            <button class="btn btn-brand w-100">Filtrovat</button>
+        </div>
+    </form>
+
+    <form method="post" asp-action="Create" class="row g-2 mb-4">
+        @Html.AntiForgeryToken()
+        <div class="col-12 col-md-5">
+            <input name="street" class="form-control" placeholder="Ulice" required />
+        </div>
+        <div class="col-6 col-md-2">
+            <input name="housenumber" class="form-control" placeholder="Číslo" required inputmode="numeric" />
+        </div>
+        <div class="col-6 col-md-2">
+            <input name="postalcode" class="form-control" placeholder="PSČ" required inputmode="numeric" />
+        </div>
+        <div class="col-12 col-md-3">
+            <button class="btn btn-success w-100">Přidat adresu</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>Ulice / Číslo / PSČ / Poslední použití / Použití</th>
+                <th class="text-end">Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td>
+                              <form asp-action="Update" asp-route-id="@a.Id" method="post"
+                                    class="row g-2 m-0 align-items-center" data-addr-form>
+                                                    @Html.AntiForgeryToken()
+
+                                <div class="col-12 col-md-4">
+                                  <input name="street"
+                                         class="form-control form-control-sm"
+                                         value="@a.Street"
+                                         data-orig="@a.Street"/>
+                                </div>
+
+                                <div class="col-6 col-md-2">
+                                  <input name="housenumber"
+                                         class="form-control form-control-sm"
+                                         value="@a.House"
+                                         inputmode="numeric"
+                                         data-orig="@a.House"/>
+                                </div>
+
+                                <div class="col-6 col-md-2">
+                                  <input name="postalcode"
+                                         class="form-control form-control-sm"
+                                         value="@a.Postal"
+                                         inputmode="numeric"
+                                         data-orig="@a.Postal"/>
+                                </div>
+
+                                <div class="col-12 col-md-2 small text-muted d-md-block d-none">
+                                                        @(a.LastUsed?.ToString("yyyy-MM-dd HH:mm") ?? "-")
+                                </div>
+
+                                <div class="col-6 col-md-1 small text-muted text-center">
+                                                        @a.UsedCount
+                                </div>
+
+                                <div class="col-6 col-md-1 text-end">
+                                  <button type="submit" class="btn btn-sm btn-brand" data-save disabled>Uložit</button>
+                                </div>
+                              </form>
+                            </td>
+                        <td class="text-end">
+                            <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="m-0"
+                                  onsubmit="return confirm('Smazat adresu?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                @(a.UsedCount > 0 ? "disabled" : null)
+                                        title="Nelze smazat: adresa je použitá v objednávkách">
+                                    Smazat
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    document.querySelectorAll('[data-addr-form]').forEach(f => {
+      const btn = f.querySelector('[data-save]');
+      const street = f.querySelector('input[name="street"]');
+      const house  = f.querySelector('input[name="housenumber"]');
+      const postal = f.querySelector('input[name="postalcode"]');
+
+      const orig = {
+        street: (street.getAttribute('data-orig') ?? '').trim(),
+        house : (house.getAttribute('data-orig')  ?? '').trim(),
+        postal: (postal.getAttribute('data-orig') ?? '').trim()
+      };
+
+      function changed() {
+        const cur = {
+          street: street.value.trim(),
+          house : house.value.trim(),
+          postal: postal.value.trim()
+        };
+        return cur.street !== orig.street || cur.house !== orig.house || cur.postal !== orig.postal;
+      }
+
+      function sync() { btn.disabled = !changed(); }
+
+      street.addEventListener('input', sync);
+      house .addEventListener('input', sync);
+      postal.addEventListener('input', sync);
+
+      sync();
+    });
+    </script>
+}
