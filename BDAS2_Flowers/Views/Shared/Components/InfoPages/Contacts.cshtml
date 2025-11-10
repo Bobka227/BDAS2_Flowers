@@ -1,0 +1,60 @@
+﻿@model List<(int Id, string Name, string? Phone)>
+
+@{
+    ViewData["Title"] = "Kontakt";
+
+    var addresses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Central Flowers"] = "Václavské náměstí 12, Praha 1",
+                ["West End Flowers"] = "Masarykova 5, Brno-střed",
+                ["East Market Flowers"] = "Hlavní 33, Ostrava"
+            };
+
+    string Addr(string name)
+        => addresses.TryGetValue(name, out var a) ? a : "- není v datech -";
+
+    string PhoneFmt(string? p)
+        => string.IsNullOrWhiteSpace(p) ? "- není v datech -" : p;
+}
+
+<section class="hero mb-4">
+    <div class="flex-fill">
+        <span class="badge badge-hero rounded-pill px-3 py-2">
+            <i class="bi bi-geo-alt"></i> Najdete nás po celé ČR
+        </span>
+        <h1 class="display-5 fw-bold mt-2">Kontakty & prodejny</h1>
+        <p class="text-muted fs-6 mb-0">
+            Zastavte se v některé z našich prodejen, nebo nám zavolejte.
+            Rádi pomůžeme s výběrem i doručením.
+        </p>
+    </div>
+
+    <img class="hero-photo"
+         src="~/images/main-photo.jpg"
+         asp-append-version="true"
+         alt="Flowers">
+</section>
+
+<div class="row g-4">
+    @foreach (var s in Model)
+    {
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card rounded-4 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title mb-2">@s.Name</h5>
+
+                        <div class="text-muted small">
+                            <div class="mb-1">
+                                <i class="bi bi-geo-alt"></i>
+                                <strong>Adresa:</strong> @Addr(s.Name)
+                            </div>
+                            <div>
+                                <i class="bi bi-telephone"></i>
+                                <strong>Telefon:</strong> @PhoneFmt(s.Phone)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    }
+</div>

@@ -17,6 +17,20 @@ body {
     isolation: isolate;
 }
 
+.hero-photo {
+    width: 640px;
+    height: 320px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    border-radius: 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .hero-photo {
+        display: none;
+    }
+}
+
 .btn-brand {
     border: 2px solid var(--brand-contrast);
     background: var(--brand);

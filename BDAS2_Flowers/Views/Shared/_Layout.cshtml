@@ -30,9 +30,18 @@
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" asp-controller="Catalog" asp-action="Index">
-                            <i class="bi bi-house-door"></i> E-shop
-                        </a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <a class="nav-link" asp-controller="Catalog" asp-action="Index">
+                                    <i class="bi bi-house-door"></i> E-shop
+                                </a>
+                            }
+                        else
+                            {
+                                <a href="#" class="nav-link requires-auth" data-intent="eshop">
+                                    <i class="bi bi-house-door"></i> E-shop
+                                </a>
+                            }
                     </li>
 
                     <li class="nav-item dropdown">
@@ -48,7 +57,7 @@
                         @await Component.InvokeAsync("EventsMenu", new { onlyUsed = false })
                     </li>
 
-                    <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="References">Reference</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Recenze">Recenze</a></li>
                     <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Contact">Kontakt</a></li>
                 </ul>
 
@@ -96,10 +105,20 @@
                         <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Auth" asp-action="Register">Registrovat</a>
                     }
 
-                    <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Cart" asp-action="Index">
-                        <i class="bi bi-bag"></i>
-                        @await Component.InvokeAsync("CartBadge")
-                    </a>
+                    @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Cart" asp-action="Index">
+                                <i class="bi bi-bag"></i>
+                                                @await Component.InvokeAsync("CartBadge")
+                            </a>
+                        }
+                    else
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-brand-second requires-auth" data-intent="cart">
+                                <i class="bi bi-bag"></i>
+                                <span id="cartBadgeCount" class="badge bg-danger ms-1" style="display:none">0</span>
+                            </button>
+                        }
                 </div>
             </div>
         </nav>
@@ -112,7 +131,30 @@
 
     </div>
 
+    <div class="modal fade" id="authRequiredModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-lock"></i> Přihlaste se</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavřít"></button>
+                </div>
+                <div class="modal-body">
+                    Pro pokračování do e-shopu a přidávání do košíku je potřeba se přihlásit.
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-brand" asp-controller="Auth" asp-action="Login">Přihlásit</a>
+                    <a class="btn btn-outline-secondary btn-brand-second" asp-controller="Auth" asp-action="Register">Registrovat</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      window.__isAuth = @((User.Identity?.IsAuthenticated ?? false).ToString().ToLower());
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
           const mq = window.matchMedia('(min-width: 992px)');
@@ -127,34 +169,51 @@
     </script>
 
     <script>
-        document.addEventListener('click', async (e) => {
-          const btn = e.target.closest('.add-to-cart');
-          if (!btn) return;
-
+      document.addEventListener('click', (e) => {
+        const guard = e.target.closest('.requires-auth');
+        if (!guard) return;
+        if (!window.__isAuth) {
           e.preventDefault();
-          const pid = btn.dataset.productId;
-          if (!pid) return;
-          try {
-            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                        || document.querySelector('meta[name="csrf-token"]')?.content;
+          new bootstrap.Modal(document.getElementById('authRequiredModal')).show();
+        }
+      });
+    </script>
 
-            const resp = await fetch('/cart/add', {
-              method: 'POST',
-              headers: { 'Content-Type':'application/x-www-form-urlencoded' },
-              body: `productId=${encodeURIComponent(pid)}&qty=1&__RequestVerificationToken=${encodeURIComponent(token||"")}`
-            });
-            const data = await resp.json();
-            if (data.ok) {
-              const badge = document.getElementById('cartBadgeCount');
-              if (badge) {
-                badge.textContent = data.count;
-                badge.style.display = data.count > 0 ? '' : 'none';
-              }
-              btn.classList.add('btn-success');
-              setTimeout(() => btn.classList.remove('btn-success'), 400);
+    <script>
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.add-to-cart');
+        if (!btn) return;
+
+        if (!window.__isAuth) {
+          e.preventDefault();
+          new bootstrap.Modal(document.getElementById('authRequiredModal')).show();
+          return;
+        }
+
+        e.preventDefault();
+        const pid = btn.dataset.productId;
+        if (!pid) return;
+        try {
+          const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                     || document.querySelector('meta[name="csrf-token"]')?.content;
+
+          const resp = await fetch('/cart/add', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/x-www-form-urlencoded' },
+            body: `productId=${encodeURIComponent(pid)}&qty=1&__RequestVerificationToken=${encodeURIComponent(token||"")}`
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            const badge = document.getElementById('cartBadgeCount');
+            if (badge) {
+              badge.textContent = data.count;
+              badge.style.display = data.count > 0 ? '' : 'none';
             }
-          } catch {  }
-        });
+            btn.classList.add('btn-success');
+            setTimeout(() => btn.classList.remove('btn-success'), 400);
+          }
+        } catch { }
+      });
     </script>
 
     @RenderSection("Scripts", required: false)

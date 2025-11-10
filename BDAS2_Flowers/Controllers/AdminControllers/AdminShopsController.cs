@@ -19,7 +19,7 @@ public class AdminShopsController : Controller
         var rows = new List<(int Id, string Name)>();
         await using var con = await _db.CreateOpenAsync();
         await using var cmd = con.CreateCommand();
-        cmd.CommandText = @"SELECT SHOPID, NAME FROM FLOWER_SHOP ORDER BY NAME";
+        cmd.CommandText = @"SELECT ID, NAME FROM VW_SHOPS ORDER BY NAME";
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync()) rows.Add((r.GetInt32(0), r.GetString(1)));
         ViewData["Title"] = "Prodejny";

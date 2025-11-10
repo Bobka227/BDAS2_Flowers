@@ -1,11 +1,13 @@
 ﻿using BDAS2_Flowers.Data;
 using BDAS2_Flowers.Models.ViewModels.ProductModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
 
 namespace BDAS2_Flowers.Controllers.ProductControllers
 {
+    [Authorize]
     public class CatalogController : Controller
     {
         private readonly IDbFactory _db;
