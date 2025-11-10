@@ -1,0 +1,73 @@
+﻿@{
+    ViewData["Title"] = "Recenze";
+
+    var reviews = new[]
+    {
+        new { Name="Míša K.",   City="Praha",      Stars=5, Date="2. 5. 2025",  Text="Bleskové doručení a nádherná kytice. Doporučuji všem!" },
+        new { Name="Tomáš H.",  City="Brno",       Stars=4, Date="28. 4. 2025", Text="Objednávka šla hladce, květiny vydržely celý týden." },
+        new { Name="Eva S.",    City="Ostrava",    Stars=5, Date="21. 4. 2025", Text="Skvělá komunikace a krásné balení, děkuji." },
+        new { Name="Lucie P.",  City="Plzeň",      Stars=5, Date="15. 4. 2025", Text="Individuální přístup a opravdu originální vazba." },
+        new { Name="Martin D.", City="Hradec Králové", Stars=4, Date="10. 4. 2025", Text="Drobné zpoždění, ale kvalita kytice výborná." },
+        new { Name="Veronika R.", City="Liberec",  Stars=5, Date="3. 4. 2025",  Text="Objednáno ráno, odpoledne předáno. Super!" },
+        new { Name="Pavel N.",  City="Olomouc",    Stars=5, Date="25. 3. 2025", Text="Nejhezčí růže, jaké jsem kdy kupoval." },
+        new { Name="Barbora M.",City="České Budějovice", Stars=4, Date="18. 3. 2025", Text="Pěkné květiny, dobrá cena, ochotný kurýr." }
+    };
+
+    double avg = reviews.Average(r => (double)r.Stars);
+    int count = reviews.Length;
+
+    Func<int, string> Stars = (rating) =>
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 1; i <= 5; i++)
+            sb.Append($@"<i class=""bi {(i <= rating ? "bi-star-fill" : "bi-star")}""></i>");
+        return sb.ToString();
+    };
+}
+
+<section class="hero mb-4">
+    <div class="flex-fill">
+        <span class="badge badge-hero rounded-pill px-3 py-2">
+            <i class="bi bi-chat-dots"></i> Ověřená hodnocení
+        </span>
+        <h1 class="display-5 fw-bold mt-2">Recenze zákazníků</h1>
+        <p class="text-muted fs-6 mb-0">
+            Skutečné zkušenosti našich klientů. Děkujeme, že nám pomáháte růst!
+        </p>
+        <div class="mt-3">
+            <strong>@avg.ToString("0.0")/5</strong>
+            <span class="ms-2 text-warning">
+                @Html.Raw(Stars((int)Math.Round(avg)))
+            </span>
+            <span class="text-muted ms-2">(@count hodnocení)</span>
+        </div>
+    </div>
+
+    <img class="hero-photo"
+         src="~/images/main-photo.jpg"
+         asp-append-version="true"
+         alt="Flowers">
+</section>
+
+<div class="row g-4">
+    @foreach (var r in reviews)
+    {
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card rounded-4 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="card-title mb-0">@r.Name</h5>
+                            <small class="text-muted">@r.Date</small>
+                        </div>
+                        <div class="text-warning mb-2" aria-label="@r.Stars z 5">
+                        @Html.Raw(Stars(r.Stars))
+                        </div>
+                        <p class="mb-2">@r.Text</p>
+                        <div class="text-muted small">
+                            <i class="bi bi-geo-alt"></i> @r.City
+                        </div>
+                    </div>
+                </div>
+            </div>
+    }
+</div>

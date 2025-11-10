@@ -11,10 +11,21 @@
         </span>
         <h1 class="display-4 fw-bold mt-2">Darujte jedinečný zážitek</h1>
         <p class="text-muted fs-5">U nás nemusíte vybírat ze stovek druhů květin – připravíme originální kytici na míru.</p>
-        <a class="btn btn-brand btn-lg mt-2" asp-controller="Catalog" asp-action="Index">E-shop</a>
+        @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="btn btn-brand btn-lg mt-2" asp-controller="Catalog" asp-action="Index">E-shop</a>
+            }
+        else
+            {
+                <a href="#" class="btn btn-brand btn-lg mt-2 requires-auth" data-intent="eshop">E-shop</a>
+            }
     </div>
-    <img class="rounded-4 d-none d-md-block" style="width:46%;height:320px;object-fit:cover"
-         src="https://images.unsplash.com/photo-1491002052546-bf38f186af7c?q=80&w=1200" alt="Flowers">
+
+    <img class="hero-photo d-none d-md-block"
+     src="~/images/main-photo.jpg"
+     asp-append-version="true"
+     alt="Flowers"
+     width="640" height="320" />
 </section>
 
 <div class="steps mb-4">
@@ -28,16 +39,26 @@
 <section class="my-4">
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h2 class="h4 m-0">Vybráno pro vás</h2>
-        <a class="link-brand" asp-controller="Catalog" asp-action="Index">Zobrazit vše</a>
+        @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="link-brand" asp-controller="Catalog" asp-action="Index">Zobrazit vše</a>
+            }
+        else
+            {
+                <a href="#" class="link-brand requires-auth" data-intent="eshop">Zobrazit vše</a>
+            }
     </div>
 
     <div class="row g-4">
-        @foreach (var p in Model)
-        {
-            <div class="col-12 col-sm-6 col-lg-3">
-                @await Html.PartialAsync("_ProductCard", p)
-            </div>
+        @{
+            ViewBag.HideAdd = true;
         }
+        @foreach (var p in Model)
+            {
+                <div class="col-12 col-sm-6 col-lg-3">
+                        @await Html.PartialAsync("_ProductCard", p)
+                </div>
+            }
     </div>
 </section>
 
