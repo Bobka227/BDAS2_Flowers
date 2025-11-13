@@ -106,11 +106,13 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             await using var con = await _db.CreateOpenAsync();
 
             string? dbHash;
-            await using (var cmd = new OracleCommand(@"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
+            await using (var cmd = new OracleCommand(
+                @"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
             {
                 cmd.Parameters.Add(new OracleParameter("id", CurrentUserId));
                 dbHash = (string?)await cmd.ExecuteScalarAsync();
             }
+
             if (dbHash == null || !_hasher.Verify(vm.Password, dbHash))
             {
                 TempData["ProfileError"] = "Nesprávné heslo.";
@@ -119,10 +121,17 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             try
             {
-                await using (var cmd = new OracleCommand(@"UPDATE ""ST72861"".""USER"" SET ""EMAIL"" = :em WHERE ""USERID"" = :id", con))
+                await using (var cmd = new OracleCommand("ST72861.PRC_USER_CHANGE_EMAIL", con)
                 {
-                    cmd.Parameters.Add(new OracleParameter("em", vm.NewEmail.Trim()));
-                    cmd.Parameters.Add(new OracleParameter("id", CurrentUserId));
+                    CommandType = System.Data.CommandType.StoredProcedure,
+                    BindByName = true
+                })
+                {
+                    cmd.Parameters.Add("p_user_id", OracleDbType.Int32).Value = CurrentUserId;
+                    cmd.Parameters.Add("p_new_email", OracleDbType.Varchar2, 200).Value = vm.NewEmail.Trim();
+                    cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100)
+                                  .Value = User.Identity?.Name ?? "web";
+
                     await cmd.ExecuteNonQueryAsync();
                 }
 
@@ -130,8 +139,12 @@ namespace BDAS2_Flowers.Controllers.UserControllers
                 var old = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
                 if (old != null) claims.Remove(old);
                 claims.Add(new Claim(ClaimTypes.Email, vm.NewEmail.Trim()));
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+
+                var identity = new ClaimsIdentity(
+                    claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(identity));
 
                 TempData["ProfileOk"] = "E-mail byl změněn.";
                 return Redirect("/profile?tab=overview");
@@ -148,6 +161,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             }
         }
 
+
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/change-password")]
         public async Task<IActionResult> ChangePassword(ChangePasswordVm vm)
@@ -163,11 +177,13 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             await using var con = await _db.CreateOpenAsync();
 
             string? dbHash;
-            await using (var cmd = new OracleCommand(@"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
+            await using (var cmd = new OracleCommand(
+                @"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
             {
                 cmd.Parameters.Add(new OracleParameter("id", CurrentUserId));
                 dbHash = (string?)await cmd.ExecuteScalarAsync();
             }
+
             if (dbHash == null || !_hasher.Verify(vm.CurrentPassword, dbHash))
             {
                 TempData["ProfileError"] = "Aktuální heslo není správné.";
@@ -175,16 +191,25 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             }
 
             var newHash = _hasher.Hash(vm.NewPassword);
-            await using (var cmd = new OracleCommand(@"UPDATE ""ST72861"".""USER"" SET ""PASSWORDHASH"" = :ph WHERE ""USERID"" = :id", con))
+
+            await using (var cmd = new OracleCommand("ST72861.PRC_USER_CHANGE_PASSWORD", con)
             {
-                cmd.Parameters.Add(new OracleParameter("ph", newHash));
-                cmd.Parameters.Add(new OracleParameter("id", CurrentUserId));
+                CommandType = System.Data.CommandType.StoredProcedure,
+                BindByName = true
+            })
+            {
+                cmd.Parameters.Add("p_user_id", OracleDbType.Int32).Value = CurrentUserId;
+                cmd.Parameters.Add("p_new_hash", OracleDbType.Varchar2, 4000).Value = newHash;
+                cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100)
+                              .Value = User.Identity?.Name ?? "web";
+
                 await cmd.ExecuteNonQueryAsync();
             }
 
             TempData["ProfileOk"] = "Heslo bylo změněno.";
             return Redirect("/profile?tab=overview");
         }
+
 
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/avatar")]
