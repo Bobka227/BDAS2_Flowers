@@ -56,6 +56,33 @@ public class AdminOrdersController : Controller
         return View("/Views/AdminPanel/Orders/Index.cshtml", rows);
     }
 
+    [HttpPost("{orderNo}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(string orderNo)
+    {
+        await using var con = await _db.CreateOpenAsync();
+        await using var cmd = con.CreateCommand();
+
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.BindByName = true;
+        cmd.CommandText = "ST72861.PRC_ADMIN_ORDER_DELETE"; 
+
+        cmd.Parameters.Add("p_order_no", OracleDbType.Varchar2, 50).Value = orderNo;
+
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+            TempData["Msg"] = $"Objednávka {orderNo} byla smazána.";
+        }
+        catch (OracleException ex)
+        {
+            TempData["Msg"] = "Chyba při mazání objednávky: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+
     // GET /admin/orders/{orderNo}
     [HttpGet("{orderNo}")]
     public async Task<IActionResult> Details(string orderNo)

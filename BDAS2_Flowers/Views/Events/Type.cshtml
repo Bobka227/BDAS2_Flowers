@@ -70,9 +70,10 @@
           </ul>
     }
 
-  <form asp-controller="Orders" asp-action="CreateForEvent" method="get" class="d-flex gap-2 mt-3">
-    <input type="hidden" name="eventTypeId" value="@Model.EventTypeId" />
-    <button class="btn btn-lg btn-brand">Objednat organizaci</button>
-    <a class="btn btn-lg btn-brand-second" asp-controller="Home" asp-action="Index">Zpět</a>
-  </form>
+    <form asp-controller="OrderEvent" asp-action="OrderForm" method="get" class="d-flex gap-2 mt-3">
+        <input type="hidden" name="eventTypeId" value="@Model.EventTypeId" />
+        <button class="btn btn-lg btn-brand" type="submit">Objednat organizaci</button>
+        <a class="btn btn-lg btn-brand-second" asp-controller="Home" asp-action="Index">Zpět</a>
+    </form>
+
 </section>

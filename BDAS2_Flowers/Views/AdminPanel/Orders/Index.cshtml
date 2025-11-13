@@ -69,12 +69,25 @@
                                 <td>@o.Delivery</td>
                                 <td>@o.Shop</td>
                                         <td class="text-end">@($"{o.Total:0 Kč}")</td>
-                                <td class="text-end">
-                                    <a class="btn btn-sm btn-outline-secondary"
-                                       asp-controller="AdminOrders"
-                                       asp-action="Details"
-                                       asp-route-orderNo="@o.OrderNo">Detail</a>
-                                </td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary me-1"
+                                   asp-controller="AdminOrders"
+                                   asp-action="Details"
+                                   asp-route-orderNo="@o.OrderNo">Detail</a>
+
+                                <form asp-controller="AdminOrders"
+                                      asp-action="Delete"
+                                      asp-route-orderNo="@o.OrderNo"
+                                      method="post"
+                                      class="d-inline"
+                                      onsubmit="return confirm('Opravdu smazat objednávku @o.OrderNo?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        Smazat
+                                    </button>
+                                </form>
+                            </td>
+
                             </tr>
                     }
                     </tbody>

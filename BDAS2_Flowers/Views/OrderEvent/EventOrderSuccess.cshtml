@@ -1,0 +1,25 @@
+﻿@{
+    var orderNo = Convert.ToString(ViewData["OrderNo"]) ?? "—";
+    var eventId = ViewData["EventTypeId"] as int?;
+}
+
+<section class="container my-5">
+    <h1 class="mb-3">Objednávka odeslána</h1>
+    <p class="lead">Číslo objednávky: <strong>@orderNo</strong></p>
+
+    <div class="mt-4">
+        @if (eventId is int etid && etid > 0)
+        {
+            <a class="btn btn-brand w-100"
+               asp-controller="Events" asp-action="Type" asp-route-id="@etid">
+                Zpět na události
+            </a>
+        }
+        else
+        {
+            <a class="btn btn-brand w-100" asp-controller="Home" asp-action="Index">
+                Zpět na hlavní stránku
+            </a>
+        }
+    </div>
+</section>

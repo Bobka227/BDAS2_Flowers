@@ -1,0 +1,79 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.EventModels.EventOrderVm
+@{
+    ViewData["Title"] = "Objednat organizaci";
+}
+
+<h1 class="mb-4">Objednat organizaci</h1>
+
+<form asp-action="Order" asp-controller="OrderEvent" method="post" class="p-4 rounded-4 bg-white shadow-sm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+    <input type="hidden" asp-for="EventTypeId" />
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label asp-for="EventDate" class="form-label">Datum akce</label>
+            <input asp-for="EventDate" class="form-control" type="date" />
+            <span asp-validation-for="EventDate" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-8">
+            <label asp-for="ShopId" class="form-label">Prodejna</label>
+            <select asp-for="ShopId" class="form-select">
+                @foreach (var s in Model.Shops)
+                {
+                    <option value="@s.Id">@s.Name</option>
+                }
+            </select>
+            <span asp-validation-for="ShopId" class="text-danger"></span>
+        </div>
+
+        <div class="col-12 mt-2">
+            <label class="form-label">Adresa konání</label>
+        </div>
+        <div class="col-md-6">
+            <input asp-for="Street" class="form-control" placeholder="Ulice" />
+            <span asp-validation-for="Street" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <input asp-for="HouseNumber" class="form-control" placeholder="Číslo domu" />
+            <span asp-validation-for="HouseNumber" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <input asp-for="PostalCode" class="form-control" placeholder="PSČ" />
+            <span asp-validation-for="PostalCode" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="Quantity" class="form-label">Počet</label>
+            <input asp-for="Quantity" class="form-control" type="number" min="1" />
+            <span asp-validation-for="Quantity" class="text-danger"></span>
+        </div>
+
+        <div class="col-12 mt-2">
+            <label class="form-label d-block">Platba</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="PaymentType" value="cash" id="payCash">
+                <label class="form-check-label" for="payCash">Hotově</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="PaymentType" value="card" id="payCard">
+                <label class="form-check-label" for="payCard">Kartou</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="PaymentType" value="cupon" id="payCupon">
+                <label class="form-check-label" for="payCupon">Kupon</label>
+            </div>
+            <span asp-validation-for="PaymentType" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-brand">Odeslat objednávku</button>
+        <a asp-controller="Events" asp-action="Type" asp-route-id="@Model.EventTypeId" class="btn btn-brand-second">Zpět</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
