@@ -48,26 +48,41 @@ public class CartController : Controller
     [HttpPost("add")]
     public async Task<IActionResult> Add(int productId, int quantity = 1)
     {
+        bool isAjax = string.Equals(
+            Request.Headers["X-Requested-With"],
+            "XMLHttpRequest",
+            StringComparison.OrdinalIgnoreCase);
+
         if (productId <= 0 || quantity <= 0)
+        {
+            if (isAjax)
+                return BadRequest(new { ok = false, error = "Neplatný produkt." });
+
             return Redirect(Request.Headers["Referer"].ToString() ?? "/catalog");
+        }
 
         await using var con = new OracleConnection(_cfg.GetConnectionString("Oracle"));
         await con.OpenAsync();
 
         string title;
         decimal price;
+
         await using (var cmd = new OracleCommand(
             @"SELECT Name, CAST(Price AS NUMBER(10,2)) 
-                FROM PRODUCT 
-               WHERE ProductId = :id", con))
+            FROM PRODUCT 
+           WHERE ProductId = :id", con))
         {
             cmd.Parameters.Add("id", productId);
             await using var rd = await cmd.ExecuteReaderAsync();
             if (!await rd.ReadAsync())
             {
+                if (isAjax)
+                    return NotFound(new { ok = false, error = "Produkt nebyl nalezen." });
+
                 TempData["Error"] = "Produkt nebyl nalezen.";
                 return Redirect(Request.Headers["Referer"].ToString() ?? "/catalog");
             }
+
             title = rd.GetString(0);
             price = (decimal)rd.GetDecimal(1);
         }
@@ -75,13 +90,25 @@ public class CartController : Controller
         var cart = HttpContext.Session.GetJson<CartVm>(CartKey) ?? new CartVm();
         var line = cart.Items.FirstOrDefault(i => i.ProductId == productId);
         if (line == null)
-            cart.Items.Add(new CartItemVm { ProductId = productId, Title = title, UnitPrice = price, Quantity = quantity });
+            cart.Items.Add(new CartItemVm
+            {
+                ProductId = productId,
+                Title = title,
+                UnitPrice = price,
+                Quantity = quantity
+            });
         else
             line.Quantity += quantity;
 
         HttpContext.Session.SetJson(CartKey, cart);
+        var totalCount = cart.Items.Sum(i => i.Quantity);
+
+        if (isAjax)
+            return Json(new { ok = true, count = totalCount });
+
         return Redirect(Request.Headers["Referer"].ToString() ?? "/catalog");
     }
+
 
     [ValidateAntiForgeryToken]
     [HttpPost("inc")]

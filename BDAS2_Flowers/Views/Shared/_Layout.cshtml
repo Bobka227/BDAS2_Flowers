@@ -182,41 +182,48 @@
     </script>
 
     <script>
-      document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.add-to-cart');
-        if (!btn) return;
+        document.addEventListener('click', async (e) => {
+          const btn = e.target.closest('.add-to-cart');
+          if (!btn) return;
 
-        if (!window.__isAuth) {
-          e.preventDefault();
-          new bootstrap.Modal(document.getElementById('authRequiredModal')).show();
-          return;
-        }
-
-        e.preventDefault();
-        const pid = btn.dataset.productId;
-        if (!pid) return;
-        try {
-          const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                     || document.querySelector('meta[name="csrf-token"]')?.content;
-
-          const resp = await fetch('/cart/add', {
-            method: 'POST',
-            headers: { 'Content-Type':'application/x-www-form-urlencoded' },
-            body: `productId=${encodeURIComponent(pid)}&qty=1&__RequestVerificationToken=${encodeURIComponent(token||"")}`
-          });
-          const data = await resp.json();
-          if (data.ok) {
-            const badge = document.getElementById('cartBadgeCount');
-            if (badge) {
-              badge.textContent = data.count;
-              badge.style.display = data.count > 0 ? '' : 'none';
-            }
-            btn.classList.add('btn-success');
-            setTimeout(() => btn.classList.remove('btn-success'), 400);
+          if (!window.__isAuth) {
+            e.preventDefault();
+            new bootstrap.Modal(document.getElementById('authRequiredModal')).show();
+            return;
           }
-        } catch { }
-      });
+
+          e.preventDefault();
+          const pid = btn.dataset.productId;
+          if (!pid) return;
+
+          try {
+            const token =
+              document.querySelector('input[name="__RequestVerificationToken"]')?.value
+              || document.querySelector('meta[name="csrf-token"]')?.content;
+
+            const resp = await fetch('/cart/add', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: `productId=${encodeURIComponent(pid)}&quantity=1&__RequestVerificationToken=${encodeURIComponent(token || "")}`
+            });
+
+            const data = await resp.json();
+            if (data.ok) {
+              const badge = document.getElementById('cartBadgeCount');
+              if (badge) {
+                badge.textContent = data.count;
+                badge.style.display = data.count > 0 ? '' : 'none';
+              }
+              btn.classList.add('btn-success');
+              setTimeout(() => btn.classList.remove('btn-success'), 400);
+            }
+          } catch {  }
+        });
     </script>
+
 
     @RenderSection("Scripts", required: false)
 </body>
