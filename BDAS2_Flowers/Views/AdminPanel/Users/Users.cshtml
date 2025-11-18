@@ -1,7 +1,11 @@
-﻿@model List<(string Email,string Name,string Role,int Orders)>
+﻿@using System.Security.Claims
+@model List<(string Email,string Name,string Role,int Orders)>
+
 @{
     ViewData["Title"] = "Uživatelé";
+    var currentEmail = User.FindFirstValue(ClaimTypes.Email);
 }
+
 <div class="container py-4">
     @if (TempData["Msg"] is string m)
     {
@@ -40,7 +44,22 @@
                                 <button class="btn btn-sm btn-brand">Make Admin</button>
                             </form>
                         }
+
+                        @if (!string.Equals(u.Email, currentEmail, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <form asp-controller="AdminUsers"
+                                  asp-action="Impersonate"
+                                  method="post"
+                                  class="d-inline ms-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="email" value="@u.Email" />
+                                <button type="submit" class="btn btn-sm btn-outline-dark">
+                                    Emulovat
+                                </button>
+                            </form>
+                        }
                     </td>
+
                 </tr>
             }
         </tbody>

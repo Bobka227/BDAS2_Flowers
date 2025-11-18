@@ -1,9 +1,12 @@
-﻿@{
+﻿@using System.Security.Claims
+@{
     Layout = null;
+    var impersonatedBy = User.Claims.FirstOrDefault(c => c.Type == "ImpersonatedBy")?.Value;
 }
 <!DOCTYPE html>
 <html lang="cs">
 <head>
+
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Flowers</title>
@@ -18,6 +21,25 @@
     <meta name="csrf-token" content="@tokens.RequestToken" />
 </head>
 <body class="theme-rose bg-floral">
+    @if (!string.IsNullOrEmpty(impersonatedBy))
+    {
+        <div class="alert alert-warning text-center mb-0 rounded-0">
+            Emulujete uživatele
+            <strong>@User.Identity?.Name</strong>
+            (<code>@User.FindFirstValue(ClaimTypes.Email)</code>).
+            Původně přihlášený admin:
+            <strong>@impersonatedBy</strong>.
+
+            <form method="post"
+                  action="/auth/stop-impersonation"
+                  class="d-inline ms-3">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-dark">
+                    Zpět na admin účet
+                </button>
+            </form>
+        </div>
+    }
     <div class="container py-3">
 
         <nav class="navbar navbar-expand-lg rounded-4 px-3 py-2 shadow-sm" style="background:#FFFFFF;">

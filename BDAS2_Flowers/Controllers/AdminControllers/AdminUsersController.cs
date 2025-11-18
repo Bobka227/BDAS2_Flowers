@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
@@ -106,4 +109,66 @@ public class AdminUsersController : Controller
 
         return View("/Views/AdminPanel/Users/UserOrders.cshtml", vm);
     }
+
+
+    [HttpPost("impersonate")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Impersonate(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            TempData["DiagErr"] = "Chybí e-mail uživatele.";
+            return RedirectToAction("Index");
+        }
+
+        var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "";
+
+        await using var conn = await _db.CreateOpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.BindByName = true;
+        cmd.CommandText = @"
+        SELECT u.USERID,
+               u.EMAIL,
+               u.FIRSTNAME,
+               u.LASTNAME,
+               r.ROLENAME
+          FROM ""USER"" u
+          JOIN ROLE r ON r.ROLEID = u.ROLEID
+         WHERE UPPER(u.EMAIL) = UPPER(:email)";
+        cmd.Parameters.Add("email", OracleDbType.Varchar2).Value = email.Trim();
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            TempData["DiagErr"] = "Uživatel nebyl nalezen.";
+            return RedirectToAction("Index");
+        }
+
+        var userId = reader.GetInt32(0);
+        var userMail = reader.GetString(1);
+        var first = reader.IsDBNull(2) ? "" : reader.GetString(2);
+        var last = reader.IsDBNull(3) ? "" : reader.GetString(3);
+        var roleName = reader.GetString(4);
+
+        var fullName = (first + " " + last).Trim();
+
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+        new Claim(ClaimTypes.Name, fullName),
+        new Claim(ClaimTypes.Email, userMail),
+        new Claim(ClaimTypes.Role, roleName),
+        new Claim("ImpersonatedBy", adminEmail)
+    };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+        return RedirectToAction("Index", "Home");
+    }
+
+
 }
