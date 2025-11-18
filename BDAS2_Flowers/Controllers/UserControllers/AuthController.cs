@@ -133,6 +133,51 @@ public class AuthController : Controller
         return RedirectToAction("Index", "Home");
     }
 
+    [HttpPost("/auth/stop-impersonation")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> StopImpersonation()
+    {
+        var adminEmail = User.Claims.FirstOrDefault(c => c.Type == "ImpersonatedBy")?.Value;
+
+        if (string.IsNullOrWhiteSpace(adminEmail))
+        {
+            return RedirectToAction("Index", "Home");
+        }
+
+        await using var conn = await _db.CreateOpenAsync();
+
+        int? id = null; string? email = null; string role = "Customer"; string? fn = null; string? ln = null;
+
+        await using (var c = conn.CreateCommand())
+        {
+            c.CommandText = @"
+              SELECT u.userid, u.email, r.rolename, u.firstname, u.lastname
+              FROM ""USER"" u
+              JOIN role r ON r.roleid = u.roleid
+              WHERE LOWER(u.email) = :email";
+            c.Parameters.Add(new OracleParameter("email", OracleDbType.Varchar2, adminEmail.ToLower(), ParameterDirection.Input));
+
+            await using var r = await c.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            if (await r.ReadAsync())
+            {
+                id = DbRead.GetInt32(r, 0);
+                email = r.GetString(1);
+                role = r.GetString(2);
+                fn = r.IsDBNull(3) ? "" : r.GetString(3);
+                ln = r.IsDBNull(4) ? "" : r.GetString(4);
+            }
+        }
+
+        if (id is null || email is null)
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Index", "Home");
+        }
+
+        await SignInAsync(id.Value, email, role, fn ?? "", ln ?? "");
+        return RedirectToAction("Index", "AdminHome");
+    }
+
     [HttpGet("/auth/denied")]
     public IActionResult Denied() => Content("Přístup odepřen.");
 

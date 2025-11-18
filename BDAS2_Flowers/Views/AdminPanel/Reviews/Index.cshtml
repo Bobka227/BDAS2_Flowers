@@ -1,0 +1,70 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model IEnumerable<AdminReviewRowVm>
+
+@{
+    ViewData["Title"] = "Recenze";
+}
+
+<div class="container py-3">
+    <h2 class="mb-3">Recenze zákazníků</h2>
+
+    @if (TempData["DiagOk"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success">@ok</div>
+    }
+    @if (TempData["DiagErr"] is string er && !string.IsNullOrWhiteSpace(er))
+    {
+        <div class="alert alert-danger">@er</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-light border">
+            Žádné recenze nebyly nalezeny.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Uživatel</th>
+                        <th>Město</th>
+                        <th>Hodnocení</th>
+                        <th>Datum</th>
+                        <th>Text</th>
+                        <th class="text-end">Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td>@r.ReviewId</td>
+                            <td>@r.UserDisplay</td>
+                            <td>@r.City</td>
+                            <td>@r.Stars / 5</td>
+                            <td>@r.Created.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td style="max-width: 400px">@r.Text</td>
+                            <td class="text-end">
+                                <form asp-action="Delete"
+                                      asp-route-id="@r.ReviewId"
+                                      method="post"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Opravdu smazat tuto recenzi?');">
+                                        Smazat
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

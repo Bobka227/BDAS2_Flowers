@@ -1,20 +1,8 @@
-﻿@{
+﻿@using BDAS2_Flowers.Models.ViewModels.ReviewModels
+@model ReviewsPageVm
+
+@{
     ViewData["Title"] = "Recenze";
-
-    var reviews = new[]
-    {
-        new { Name="Míša K.",   City="Praha",      Stars=5, Date="2. 5. 2025",  Text="Bleskové doručení a nádherná kytice. Doporučuji všem!" },
-        new { Name="Tomáš H.",  City="Brno",       Stars=4, Date="28. 4. 2025", Text="Objednávka šla hladce, květiny vydržely celý týden." },
-        new { Name="Eva S.",    City="Ostrava",    Stars=5, Date="21. 4. 2025", Text="Skvělá komunikace a krásné balení, děkuji." },
-        new { Name="Lucie P.",  City="Plzeň",      Stars=5, Date="15. 4. 2025", Text="Individuální přístup a opravdu originální vazba." },
-        new { Name="Martin D.", City="Hradec Králové", Stars=4, Date="10. 4. 2025", Text="Drobné zpoždění, ale kvalita kytice výborná." },
-        new { Name="Veronika R.", City="Liberec",  Stars=5, Date="3. 4. 2025",  Text="Objednáno ráno, odpoledne předáno. Super!" },
-        new { Name="Pavel N.",  City="Olomouc",    Stars=5, Date="25. 3. 2025", Text="Nejhezčí růže, jaké jsem kdy kupoval." },
-        new { Name="Barbora M.",City="České Budějovice", Stars=4, Date="18. 3. 2025", Text="Pěkné květiny, dobrá cena, ochotný kurýr." }
-    };
-
-    double avg = reviews.Average(r => (double)r.Stars);
-    int count = reviews.Length;
 
     Func<int, string> Stars = (rating) =>
     {
@@ -23,6 +11,9 @@
             sb.Append($@"<i class=""bi {(i <= rating ? "bi-star-fill" : "bi-star")}""></i>");
         return sb.ToString();
     };
+
+    var avg = Model?.Average ?? 0.0;
+    var count = Model?.Count ?? 0;
 }
 
 <section class="hero mb-4">
@@ -49,25 +40,94 @@
          alt="Flowers">
 </section>
 
-<div class="row g-4">
-    @foreach (var r in reviews)
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+<div class="row g-4 mb-5">
+    @if (Model?.Reviews != null)
     {
+        foreach (var r in Model.Reviews)
+        {
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="card rounded-4 shadow-sm h-100">
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <h5 class="card-title mb-0">@r.Name</h5>
-                            <small class="text-muted">@r.Date</small>
+                            <small class="text-muted">@r.Created.ToString("d. M. yyyy")</small>
                         </div>
                         <div class="text-warning mb-2" aria-label="@r.Stars z 5">
-                        @Html.Raw(Stars(r.Stars))
+                            @Html.Raw(Stars(r.Stars))
                         </div>
                         <p class="mb-2">@r.Text</p>
-                        <div class="text-muted small">
-                            <i class="bi bi-geo-alt"></i> @r.City
-                        </div>
+                        @if (!string.IsNullOrWhiteSpace(r.City))
+                        {
+                            <div class="text-muted small">
+                                <i class="bi bi-geo-alt"></i> @r.City
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
+        }
     }
 </div>
+
+@if (User.Identity?.IsAuthenticated ?? false)
+{
+    <section class="mb-5">
+        <h2 class="h5 mb-3">Přidat vlastní recenzi</h2>
+
+        <form asp-action="Add" asp-controller="Reviews" method="post"
+              class="card rounded-4 shadow-sm p-3 p-md-4">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="NewCity" class="form-label">Město</label>
+                <input asp-for="NewCity" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hodnocení</label>
+                <div class="d-flex gap-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio"
+                                   id="NewStars_@i" name="NewStars" value="@i"
+                                   @(Model?.NewStars == i ? "checked" : "") />
+                            <label class="form-check-label" for="NewStars_@i">
+                                @Html.Raw(Stars(i))
+                            </label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="NewStars" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="NewText" class="form-label">Text recenze</label>
+                <textarea asp-for="NewText" rows="3" class="form-control"></textarea>
+                <span asp-validation-for="NewText" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-brand">
+                Odeslat hodnocení
+            </button>
+        </form>
+    </section>
+}
+else
+{
+    <p class="text-muted">
+        Pro přidání vlastní recenze se prosím
+        <a asp-controller="Auth" asp-action="Login">přihlaste</a>.
+    </p>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,83 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model IEnumerable<AdminEventRowVm>
+
+@{
+    ViewData["Title"] = "Události";
+
+    string StatusBadge(string st) => st?.ToUpperInvariant() switch
+    {
+        "PENDING" => "bg-warning text-dark",
+        "SHIPPED" => "bg-info text-dark",
+        "DELIVERED" => "bg-success",
+        "CANCELLED" => "bg-secondary",
+        "RETURNED" => "bg-danger",
+        _ => "bg-light text-dark"
+    };
+}
+
+<div class="container py-3">
+    <h1 class="h4 mb-3">Události</h1>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-light border">Žádné události zatím nejsou.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Objednávka</th>
+                        <th>Datum akce</th>
+                        <th>Typ události</th>
+                        <th>Zákazník</th>
+                        <th>Status</th>
+                        <th>Doručení</th>
+                        <th>Prodejna</th>
+                        <th class="text-end">Celkem</th>
+                        <th class="text-end">Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@e.OrderNo</td>
+                            <td>@e.EventDate.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td>@e.EventType</td>
+                            <td>@e.Customer</td>
+                            <td>
+                                <span class="badge @StatusBadge(e.Status)">@e.Status</span>
+                            </td>
+                            <td>@e.Delivery</td>
+                            <td>@e.Shop</td>
+                            <td class="text-end">@($"{e.Total:0 Kč}")</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   asp-controller="AdminOrders"
+                                   asp-action="Details"
+                                   asp-route-orderNo="@e.OrderNo">
+                                    Detail
+                                </a>
+
+                                <form method="post"
+                                      asp-controller="AdminOrders"
+                                      asp-action="Delete"
+                                      asp-route-orderNo="@e.OrderNo"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Opravdu smazat objednávku @e.OrderNo (včetně události)?');">
+                                        Smazat
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
