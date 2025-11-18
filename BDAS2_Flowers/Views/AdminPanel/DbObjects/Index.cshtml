@@ -1,0 +1,88 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model DbObjectsVm
+
+@{
+    ViewData["Title"] = "Databázové objekty";
+    var groups = Model.Objects
+        .GroupBy(o => o.ObjectType)
+        .OrderBy(g => g.Key);
+}
+
+<h1 class="mb-4">Databázové objekty (systemový katalog)</h1>
+
+<p class="text-muted">
+    Výpis všech objektů ve schématu <code>@User.Identity?.Name</code>,
+    které jsou použité v semestrální práci. Data jsou čtena z
+    <code>USER_OBJECTS</code>.
+</p>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <strong>Celkový počet objektů:</strong> @Model.Objects.Count
+    </div>
+    <div>
+        <a asp-action="Download"
+           class="btn btn-sm btn-outline-secondary">
+            Stáhnout CSV
+        </a>
+    </div>
+</div>
+
+
+
+@foreach (var group in groups)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <strong>@group.Key</strong>
+            </span>
+            <span class="badge bg-secondary">
+                @group.Count() objektů
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Název</th>
+                            <th>Status</th>
+                            <th>Vytvořeno</th>
+                            <th>Poslední změna (DDL)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in group)
+                        {
+                            <tr>
+                                <td><code>@o.ObjectName</code></td>
+                                <td>@(string.IsNullOrWhiteSpace(o.Status) ? "-" : o.Status)</td>
+                                <td>
+                                    @if (o.Created.HasValue)
+                                    {
+                                        @o.Created.Value.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        @:-
+                                    }
+                                </td>
+                                <td>
+                                    @if (o.LastDdlTime.HasValue)
+                                    {
+                                        @o.LastDdlTime.Value.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        @:-
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
