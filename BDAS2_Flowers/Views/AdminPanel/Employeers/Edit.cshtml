@@ -1,0 +1,100 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model AdminEmployeeEditVm
+
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Upravit zaměstnance" : "Nový zaměstnanec";
+
+    var shops = (IEnumerable<(int Id, string Name)>)(ViewBag.Shops ?? new List<(int, string)>());
+    var positions = (IEnumerable<(int Id, string Name)>)(ViewBag.Positions ?? new List<(int, string)>());
+    var managers = (IEnumerable<(int Id, string Name)>)(ViewBag.Managers ?? new List<(int, string)>());
+}
+
+<div class="container py-4">
+    <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+
+    <form asp-controller="AdminEmployeers"
+          asp-action="@(Model.Id.HasValue ? "Edit" : "Create")"
+          asp-route-id="@(Model.Id)"
+          method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="EmploymentDate" class="form-label"></label>
+                <input asp-for="EmploymentDate" type="date" class="form-control" />
+                <span asp-validation-for="EmploymentDate" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Salary" class="form-label"></label>
+                <input asp-for="Salary" class="form-control" />
+                <span asp-validation-for="Salary" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="ShopId" class="form-label"></label>
+                <select asp-for="ShopId" class="form-select">
+                    @foreach (var s in shops)
+                    {
+                        <option value="@s.Id" selected="@(s.Id == Model.ShopId)">
+                            @s.Name
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="ShopId" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="PositionId" class="form-label"></label>
+                <select asp-for="PositionId" class="form-select">
+                    <option value="">(neuvedeno)</option>
+                    @foreach (var p in positions)
+                    {
+                        <option value="@p.Id" selected="@(Model.PositionId == p.Id)">
+                            @p.Name
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="ManagerId" class="form-label"></label>
+                <select asp-for="ManagerId" class="form-select">
+                    <option value="">(žádný nadřízený)</option>
+                    @foreach (var m in managers)
+                    {
+                        <option value="@m.Id" selected="@(Model.ManagerId == m.Id)">
+                            @m.Name
+                        </option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-brand">
+                Uložit
+            </button>
+            <a class="btn btn-outline-secondary"
+               asp-controller="AdminEmployeers"
+               asp-action="Index">
+                Zpět
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

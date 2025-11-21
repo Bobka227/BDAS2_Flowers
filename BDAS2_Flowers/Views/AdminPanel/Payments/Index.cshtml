@@ -1,0 +1,60 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model List<AdminPaymentRowVm>
+
+@{
+    ViewData["Title"] = "Platby";
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string msg && !string.IsNullOrWhiteSpace(msg))
+    {
+        <div class="alert alert-info">@msg</div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Platby</h1>
+        <a class="btn btn-brand" asp-controller="AdminPayments" asp-action="Create">
+            Nová platba
+        </a>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Způsob</th>
+                <th class="text-end">Částka</th>
+                <th class="text-end">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.PayDate.ToString("d")</td>
+                    <td>@p.Method</td>
+                    <td class="text-end">@p.Amount.ToString("0 Kč")</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           asp-controller="AdminPayments"
+                           asp-action="Edit"
+                           asp-route-id="@p.Id">
+                            Upravit
+                        </a>
+                        <form asp-controller="AdminPayments"
+                              asp-action="Delete"
+                              asp-route-id="@p.Id"
+                              method="post"
+                              class="d-inline"
+                              onsubmit="return confirm('Opravdu smazat platbu?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                Smazat
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

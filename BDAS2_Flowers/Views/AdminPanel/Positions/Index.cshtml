@@ -1,0 +1,61 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model List<AdminPositionRowVm>
+
+@{
+    ViewData["Title"] = "Pracovní pozice";
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string msg && !string.IsNullOrWhiteSpace(msg))
+    {
+        <div class="alert alert-info">@msg</div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Pracovní pozice</h1>
+        <a class="btn btn-brand"
+           asp-controller="AdminPositions"
+           asp-action="Create">
+            Nová pozice
+        </a>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Název pozice</th>
+                <th>Zaměstnanců</th>
+                <th class="text-end">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.Name</td>
+                    <td>@p.EmployeesCount</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           asp-controller="AdminPositions"
+                           asp-action="Edit"
+                           asp-route-id="@p.Id">
+                            Upravit
+                        </a>
+
+                        <form asp-controller="AdminPositions"
+                              asp-action="Delete"
+                              asp-route-id="@p.Id"
+                              method="post"
+                              class="d-inline"
+                              onsubmit="return confirm('Opravdu smazat pozici?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                Smazat
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

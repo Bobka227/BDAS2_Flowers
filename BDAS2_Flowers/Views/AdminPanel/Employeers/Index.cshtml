@@ -1,0 +1,79 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model List<AdminEmployeeRowVm>
+
+@{
+    ViewData["Title"] = "Zaměstnance";
+}
+
+<div class="container py-4">
+    @if (TempData["Msg"] is string msg && !string.IsNullOrWhiteSpace(msg))
+    {
+        <div class="alert alert-info">@msg</div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Zaměstnanci</h1>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary"
+               asp-controller="AdminEmployeers"
+               asp-action="Tree">
+                Strom struktury
+            </a>
+
+            <a class="btn btn-brand"
+               asp-controller="AdminEmployeers"
+               asp-action="Create">
+                Nový zaměstnanec
+            </a>
+        </div>
+    </div>
+
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Jméno</th>
+                <th>Datum nástupu</th>
+                <th>Plat</th>
+                <th>Prodejna</th>
+                <th>Pozice</th>
+                <th>Nadřízený</th>
+                <th class="text-end">Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in Model)
+            {
+                <tr>
+                    <td>@e.FirstName @e.LastName</td>
+                    <td>@e.EmploymentDate.ToString("d")</td>
+                    <td>@e.Salary.ToString("0 Kč")</td>
+                    <td>@e.Shop</td>
+                    <td>@e.Position</td>
+                    <td>@e.Manager</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           asp-controller="AdminEmployeers"
+                           asp-action="Edit"
+                           asp-route-id="@e.Id">
+                            Upravit
+                        </a>
+
+                        <form asp-controller="AdminEmployeers"
+                              asp-action="Delete"
+                              asp-route-id="@e.Id"
+                              method="post"
+                              class="d-inline"
+                              onsubmit="return confirm('Opravdu smazat zaměstnance?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                Smazat
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
