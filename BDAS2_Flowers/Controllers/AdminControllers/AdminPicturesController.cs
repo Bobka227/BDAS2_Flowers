@@ -14,7 +14,6 @@ public class AdminPicturesController : Controller
     private readonly IDbFactory _db;
     public AdminPicturesController(IDbFactory db) => _db = db;
 
-    // GET /admin/pictures
     [HttpGet("")]
     public async Task<IActionResult> Index(string? qName, string? qExt, string? qProduct)
     {
@@ -92,7 +91,6 @@ public class AdminPicturesController : Controller
         return View("/Views/AdminPanel/Pictures/Index.cshtml", rows);
     }
 
-    // stream BLOB → <img src="/admin/pictures/{id}/content">
     [HttpGet("{id:int}/content")]
     public async Task<IActionResult> Content(int id)
     {
@@ -125,7 +123,6 @@ public class AdminPicturesController : Controller
         return File(bytes, mime);
     }
 
-    // UPLOAD
     [ValidateAntiForgeryToken]
     [HttpPost("upload")]
     public async Task<IActionResult> Upload(int productId, string? name, IFormFile file)
@@ -170,7 +167,6 @@ public class AdminPicturesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // DELETE
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]
     public async Task<IActionResult> Delete(int id)
@@ -194,7 +190,6 @@ public class AdminPicturesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // POST /admin/pictures/{id}/update
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/update")]
     public async Task<IActionResult> UpdateMeta(int id, int productId, string name)

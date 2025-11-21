@@ -1,0 +1,41 @@
+﻿@model List<(int Id, string Name, int Level, string Manager)>
+
+@{
+    ViewData["Title"] = "Strom zaměstnanců";
+}
+
+<div class="container py-4">
+    <h1 class="h4 mb-3">Strom zaměstnanců</h1>
+
+    <p class="text-muted">
+        Zobrazuje hierarchii: kdo komu podléhá. Kliknutím na jméno otevřete editaci zaměstnance.
+    </p>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Jméno</th>
+                <th>Manažer</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model)
+            {
+                var (id, name, level, manager) = row;
+
+                <tr>
+                    <td>
+                        <a asp-controller="AdminEmployeers"
+                           asp-action="Edit"
+                           asp-route-id="@id"
+                           class="text-decoration-none"
+                           style="padding-left:@((level - 1) * 20)px">
+                            @name
+                        </a>
+                    </td>
+                    <td>@(string.IsNullOrWhiteSpace(manager) ? "-" : manager)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

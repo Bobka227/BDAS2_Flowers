@@ -1,0 +1,73 @@
+﻿@model BDAS2_Flowers.Models.ViewModels.AdminModels.AdminPaymentEditVm
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Upravit platbu" : "Nová platba";
+
+    var methods = new (string Code, string Name)[]
+    {
+        ("cash",  "Hotově"),
+        ("card",  "Kartou"),
+        ("cupon", "Kupón")
+    };
+}
+
+<div class="container py-4">
+    <div class="card rounded-4 shadow-sm mx-auto" style="max-width: 900px;">
+        <div class="card-header bg-white border-0">
+            <h1 class="h4 mb-0">
+                @(Model.Id.HasValue ? "Upravit platbu" : "Nová platba")
+            </h1>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="@(Model.Id.HasValue ? "Edit" : "Create")"
+                  asp-controller="AdminPayments"
+                  method="post">
+                @Html.AntiForgeryToken()
+                @if (Model.Id.HasValue)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+
+                <div class="mb-3">
+                    <label asp-for="PayDate" class="form-label">Datum platby</label>
+                    <input asp-for="PayDate" class="form-control" type="date" />
+                    <span asp-validation-for="PayDate" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Amount" class="form-label">Částka</label>
+                    <input asp-for="Amount" class="form-control" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MethodCode" class="form-label">Způsob platby</label>
+                    <select asp-for="MethodCode" class="form-select">
+                        @foreach (var m in methods)
+                        {
+                            <option value="@m.Code">@m.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="MethodCode" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mt-4">
+                    <a asp-action="Index"
+                       asp-controller="AdminPayments"
+                       class="btn btn-outline-secondary btn-brand-second px-4 order-2 order-md-1">
+                        <i class="bi bi-arrow-left"></i> Zpět
+                    </a>
+
+                    <button type="submit"
+                            class="btn btn-brand px-4 order-1 order-md-2">
+                        <i class="bi bi-check-circle"></i> Uložit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
