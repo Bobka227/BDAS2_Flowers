@@ -29,7 +29,6 @@
             <table class="table table-sm align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Uživatel</th>
                         <th>Město</th>
                         <th>Hodnocení</th>
@@ -42,7 +41,6 @@
                     @foreach (var r in Model)
                     {
                         <tr>
-                            <td>@r.ReviewId</td>
                             <td>@r.UserDisplay</td>
                             <td>@r.City</td>
                             <td>@r.Stars / 5</td>
