@@ -19,7 +19,17 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
         public OrdersController(IDbFactory db, IPaymentService payments)
         { _db = db; _payments = payments; }
 
-        private const string CartKey = "CART";
+        private string CartKey
+        {
+            get
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!string.IsNullOrEmpty(userId))
+                    return $"CART_USER_{userId}";
+
+                return "CART_ANON";
+            }
+        }
 
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
@@ -65,7 +75,6 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 var pendingId = await GetPendingStatusIdAsync(con);
                 var type = (vm.PaymentType ?? "cash").ToLowerInvariant();
 
-                // === ПЛАТЕЖ ЧЕРЕЗ СЕРВИС ===
                 var paymentId = await _payments.CreatePaymentAsync(con, tx, CurrentUserId, type);
                 if (type == "card" && !string.IsNullOrWhiteSpace(vm.CardNumber))
                     await _payments.AttachCardAsync(con, tx, paymentId, vm.CardNumber);

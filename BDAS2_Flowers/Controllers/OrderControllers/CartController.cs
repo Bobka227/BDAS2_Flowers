@@ -2,13 +2,24 @@
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using BDAS2_Flowers.Models.ViewModels.OrderModels;
+using System.Security.Claims;
 
 [Authorize]
 [Route("cart")]
 public class CartController : Controller
 {
     private readonly IConfiguration _cfg;
-    private const string CartKey = "CART";
+    private string CartKey
+    {
+        get
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userId))
+                return $"CART_USER_{userId}";
+
+            return "CART_ANON";
+        }
+    }
     public CartController(IConfiguration cfg) => _cfg = cfg;
 
     private async Task HydrateAsync(CartVm cart)
