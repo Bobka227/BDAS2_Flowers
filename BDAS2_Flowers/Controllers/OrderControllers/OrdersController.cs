@@ -12,7 +12,6 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
     [Authorize]
     public class OrdersController : Controller
     {
-
         private readonly IPaymentService _payments;
 
         private readonly IDbFactory _db;
@@ -43,16 +42,36 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 Items = new List<OrderItemVm>()
             };
 
-            vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT Id, Name FROM VW_DELIVERY_METHODS");
-            vm.Shops = await LoadIdNameAsync(@"SELECT ShopId AS Id, Name AS Name FROM FLOWER_SHOP");
-            vm.Addresses = await LoadIdNameAsync(@"SELECT AddressId AS Id, Street || ' ' || HouseNumber || ', ' || PostalCode AS Name FROM ADDRESS");
-            vm.Products = await LoadIdNameAsync(@"SELECT ProductId AS Id, Name AS Name FROM PRODUCT");
+            vm.DeliveryMethods = await LoadIdNameAsync(
+                @"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
+
+            vm.Shops = await LoadIdNameAsync(
+                @"SELECT ID, NAME FROM VW_SHOPS");
+
+            vm.Addresses = await LoadIdNameAsync(@"
+                SELECT ADDRESSID AS ID,
+                       STREET || ' ' || HOUSENUMBER || ', ' || POSTALCODE AS NAME
+                  FROM VW_ADMIN_ADDRESSES");
+
+            vm.Products = await LoadIdNameAsync(@"
+                SELECT PRODUCTID AS ID,
+                       TITLE     AS NAME
+                  FROM VW_CATALOG_PRODUCTS");
 
             var cart = HttpContext.Session.GetJson<CartVm>(CartKey);
             if (cart != null && cart.Items.Any())
-                vm.Items = cart.Items.Select(i => new OrderItemVm { ProductId = i.ProductId, Quantity = i.Quantity }).ToList();
+            {
+                vm.Items = cart.Items
+                    .Select(i => new OrderItemVm { ProductId = i.ProductId, Quantity = i.Quantity })
+                    .ToList();
+
+                vm.CartTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
+            }
             else
+            {
                 vm.Items.Add(new OrderItemVm());
+                vm.CartTotal = 0m;
+            }
 
             return View(vm);
         }
@@ -61,10 +80,58 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
         [HttpPost("/orders/create")]
         public async Task<IActionResult> Create(OrderCreateVm vm)
         {
-            if (!ModelState.IsValid || vm.Items == null || !vm.Items.Any() || vm.Items.Any(i => i.ProductId <= 0 || i.Quantity <= 0))
+            var errors = new List<string>();
+
+            if (vm.UseNewAddress)
             {
-                TempData["OrderError"] = "Zkontrolujte prosím položky a povinná pole.";
-                return Redirect("/orders/create");
+                if (string.IsNullOrWhiteSpace(vm.Street) || vm.HouseNumber <= 0 || vm.PostalCode <= 0)
+                    errors.Add("Vyplňte prosím ulici, číslo domu a PSČ.");
+            }
+            else
+            {
+                if (vm.AddressId is null || vm.AddressId <= 0)
+                    errors.Add("Vyberte prosím existující adresu.");
+            }
+
+            var pt = (vm.PaymentType ?? "").ToLowerInvariant();
+
+            if (pt == "card")
+            {
+                if (string.IsNullOrWhiteSpace(vm.CardNumber) || vm.CardNumber.Count(char.IsDigit) < 12)
+                    errors.Add("Zadejte platné číslo karty (min. 12 číslic).");
+            }
+            else if (pt == "cash")
+            {
+                if (!vm.CashAccepted.HasValue || vm.CashAccepted <= 0)
+                    errors.Add("Zadejte přijatou hotovost.");
+            }
+            else if (pt == "cupon")
+            {
+                if (string.IsNullOrWhiteSpace(vm.CuponCode))
+                    errors.Add("Zadejte kód kupónu.");
+            }
+
+            if (vm.Items == null || vm.Items.Count == 0 ||
+                vm.Items.Any(i => i.ProductId <= 0 || i.Quantity <= 0))
+            {
+                errors.Add("Přidejte alespoň jednu platnou položku.");
+            }
+
+            if (errors.Any())
+            {
+                vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
+                vm.Shops = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_SHOPS");
+                vm.Addresses = await LoadIdNameAsync(@"
+                    SELECT ADDRESSID AS ID,
+                           STREET || ' ' || HOUSENUMBER || ', ' || POSTALCODE AS NAME
+                      FROM VW_ADMIN_ADDRESSES");
+                vm.Products = await LoadIdNameAsync(@"
+                    SELECT PRODUCTID AS ID,
+                           TITLE     AS NAME
+                      FROM VW_CATALOG_PRODUCTS");
+
+                TempData["OrderError"] = errors.First();
+                return View(vm);
             }
 
             await using var con = await _db.CreateOpenAsync();
@@ -73,27 +140,26 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             try
             {
                 var pendingId = await GetPendingStatusIdAsync(con);
-                var type = (vm.PaymentType ?? "cash").ToLowerInvariant();
+                var rawType = pt;
 
-                var paymentId = await _payments.CreatePaymentAsync(con, tx, CurrentUserId, type);
-                if (type == "card" && !string.IsNullOrWhiteSpace(vm.CardNumber))
-                    await _payments.AttachCardAsync(con, tx, paymentId, vm.CardNumber);
-                else if (type == "cash")
+                var paymentId = await _payments.CreatePaymentAsync(con, tx, CurrentUserId, rawType);
+
+                if (rawType == "card" && !string.IsNullOrWhiteSpace(vm.CardNumber))
+                {
+                    await _payments.AttachCardAsync(con, tx, paymentId, vm.CardNumber!);
+                }
+                else if (rawType == "cash")
+                {
                     await _payments.AttachCashAsync(con, tx, paymentId, vm.CashAccepted ?? 0m);
+                }
 
                 int addressId;
                 var wantsNewAddress =
                     vm.UseNewAddress ||
-                    !string.IsNullOrWhiteSpace(vm.Street) && vm.HouseNumber > 0 && vm.PostalCode > 0;
+                    (!string.IsNullOrWhiteSpace(vm.Street) && vm.HouseNumber > 0 && vm.PostalCode > 0);
 
                 if (wantsNewAddress)
                 {
-                    if (string.IsNullOrWhiteSpace(vm.Street) || vm.HouseNumber <= 0 || vm.PostalCode <= 0)
-                    {
-                        TempData["OrderError"] = "Vyplňte prosím ulici, číslo domu a PSČ, nebo vyberte existující adresu.";
-                        return Redirect("/orders/create");
-                    }
-
                     await using (var cmd = new OracleCommand("PRC_CREATE_ADDRESS", con)
                     { CommandType = CommandType.StoredProcedure, Transaction = tx })
                     {
@@ -101,7 +167,8 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                         cmd.Parameters.Add("p_postalcode", OracleDbType.Int32).Value = vm.PostalCode;
                         cmd.Parameters.Add("p_street", OracleDbType.Varchar2, 200).Value = vm.Street.Trim();
                         cmd.Parameters.Add("p_housenumber", OracleDbType.Int32).Value = vm.HouseNumber;
-                        var oAddr = new OracleParameter("o_address_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+                        var oAddr = new OracleParameter("o_address_id", OracleDbType.Int32)
+                        { Direction = ParameterDirection.Output };
                         cmd.Parameters.Add(oAddr);
                         await cmd.ExecuteNonQueryAsync();
                         addressId = Convert.ToInt32(oAddr.Value.ToString());
@@ -109,12 +176,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 }
                 else
                 {
-                    if (vm.AddressId is null || vm.AddressId <= 0)
-                    {
-                        TempData["OrderError"] = "Vyberte prosím adresu nebo zadejte novou.";
-                        return Redirect("/orders/create");
-                    }
-                    addressId = vm.AddressId.Value;
+                    addressId = vm.AddressId!.Value;
                 }
 
                 int orderId;
@@ -127,7 +189,8 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     cmd.Parameters.Add("p_shopid", OracleDbType.Int32).Value = vm.ShopId;
                     cmd.Parameters.Add("p_addressid", OracleDbType.Int32).Value = addressId;
                     cmd.Parameters.Add("p_paymentid", OracleDbType.Int32).Value = paymentId;
-                    var o = new OracleParameter("o_order_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+                    var o = new OracleParameter("o_order_id", OracleDbType.Int32)
+                    { Direction = ParameterDirection.Output };
                     cmd.Parameters.Add(o);
                     await cmd.ExecuteNonQueryAsync();
                     orderId = Convert.ToInt32(o.Value.ToString());
@@ -150,10 +213,63 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                if (type == "cash")
+                if (rawType == "cupon" && !string.IsNullOrWhiteSpace(vm.CuponCode))
+                {
+                    var status = await ApplyCouponAsync(con, tx, paymentId, vm.CuponCode!);
+
+                    if (status != 0)
+                    {
+                        await tx.RollbackAsync();
+
+                        vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
+                        vm.Shops = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_SHOPS");
+                        vm.Addresses = await LoadIdNameAsync(@"
+                            SELECT ADDRESSID AS ID,
+                                   STREET || ' ' || HOUSENUMBER || ', ' || POSTALCODE AS NAME
+                              FROM VW_ADMIN_ADDRESSES");
+                        vm.Products = await LoadIdNameAsync(@"
+                            SELECT PRODUCTID AS ID,
+                                   TITLE     AS NAME
+                              FROM VW_CATALOG_PRODUCTS");
+
+                        TempData["OrderError"] = status switch
+                        {
+                            1 => "Zadaný kupón neexistuje.",
+                            2 => "Platnost kupónu již vypršela.",
+                            3 => "Celková cena objednávky nesmí být vyšší než hodnota kupónu.",
+                            _ => "Chyba při použití kupónu."
+                        };
+
+                        return View(vm);
+                    }
+                }
+
+                if (rawType == "cash")
                 {
                     var amount = await _payments.GetAmountAsync(con, tx, paymentId);
-                    var change = Math.Max(0, (vm.CashAccepted ?? 0m) - amount);
+                    var accepted = vm.CashAccepted ?? 0m;
+
+                    if (accepted < amount)
+                    {
+                        await tx.RollbackAsync();
+
+                        vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
+                        vm.Shops = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_SHOPS");
+                        vm.Addresses = await LoadIdNameAsync(@"
+                            SELECT ADDRESSID AS ID,
+                                   STREET || ' ' || HOUSENUMBER || ', ' || POSTALCODE AS NAME
+                              FROM VW_ADMIN_ADDRESSES");
+                        vm.Products = await LoadIdNameAsync(@"
+                            SELECT PRODUCTID AS ID,
+                                   TITLE     AS NAME
+                              FROM VW_CATALOG_PRODUCTS");
+
+                        TempData["OrderError"] =
+                            "Přijatá hotovost nesmí být menší než cena objednávky.";
+                        return View(vm);
+                    }
+
+                    var change = accepted - amount;
                     await _payments.SetCashChangeAsync(con, tx, paymentId, change);
                 }
 
@@ -169,7 +285,6 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 return Redirect("/orders/create");
             }
         }
-
 
         [HttpGet("/orders/{id:int}")]
         public async Task<IActionResult> Details(int id)
@@ -197,7 +312,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             }
 
             await using (var cmd = new OracleCommand(@"
-            SELECT PAYMENT_TYPE, AMOUNT, CARD_LAST4, CASH_ACCEPTED, CASH_RETURNED, CUPON_BONUS, CUPON_EXPIRY
+            SELECT PAYMENTTYPE, AMOUNT, CARD_LAST4, CASH_ACCEPTED, CASH_RETURNED, CUPON_BONUS, CUPON_EXPIRY
             FROM VW_ORDER_PAYMENT
             WHERE ORDERID = :id", con))
             {
@@ -214,7 +329,6 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     model.CuponExpiry = rd.IsDBNull(6) ? (DateTime?)null : rd.GetDateTime(6);
                 }
             }
-
 
             model.Items = new List<OrderItemDetailsVm>();
             await using (var cmd = new OracleCommand(@"
@@ -241,10 +355,11 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             return View(model);
         }
 
-
         private async Task<int> GetPendingStatusIdAsync(OracleConnection con)
         {
-            await using var cmd = new OracleCommand(@"SELECT StatusId FROM STATUS WHERE UPPER(StatusName) = 'PENDING'", con);
+            await using var cmd = new OracleCommand(
+                @"SELECT ID FROM VW_STATUSES WHERE UPPER(NAME) = 'PENDING'", con);
+
             var v = await cmd.ExecuteScalarAsync();
             if (v != null) return Convert.ToInt32(v);
             throw new InvalidOperationException("Tabulka STATUS je prázdná – doplňte číselník stavů.");
@@ -259,6 +374,29 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             while (await rd.ReadAsync())
                 list.Add(new IdNameVm { Id = Convert.ToInt32(rd.GetValue(0)), Name = rd.GetString(1) });
             return list;
+        }
+
+        private async Task<int> ApplyCouponAsync( OracleConnection con, OracleTransaction tx, int paymentId, string code)
+        {
+            await using var cmd = new OracleCommand("PRC_COUPON_APPLY", con)
+            {
+                CommandType = CommandType.StoredProcedure,
+                Transaction = tx,
+                BindByName = true
+            };
+
+            cmd.Parameters.Add("p_payment_id", OracleDbType.Int32).Value = paymentId;
+            cmd.Parameters.Add("p_code", OracleDbType.Varchar2, 50).Value = code.Trim();
+
+            var oStatus = new OracleParameter("o_status", OracleDbType.Int32)
+            {
+                Direction = ParameterDirection.Output
+            };
+            cmd.Parameters.Add(oStatus);
+
+            await cmd.ExecuteNonQueryAsync();
+
+            return Convert.ToInt32(oStatus.Value.ToString());
         }
     }
 }

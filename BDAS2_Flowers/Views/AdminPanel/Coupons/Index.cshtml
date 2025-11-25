@@ -1,0 +1,82 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model AdminCouponListVm
+
+@{
+    ViewData["Title"] = "Kupóny";
+}
+
+<h2>Kupóny</h2>
+
+@if (TempData["AdminError"] is string err && !string.IsNullOrWhiteSpace(err))
+{
+        <div class="alert alert-danger">@err</div>
+}
+@if (TempData["AdminOk"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+        <div class="alert alert-success">@ok</div>
+}
+
+<form method="get" asp-action="Index" asp-controller="AdminCoupons" class="mb-3 d-flex gap-2">
+    <input class="form-control" type="text" name="q" value="@Model.Query" placeholder="Hledat kupón podle kódu..." />
+    <button type="submit" class="btn btn-secondary">Hledat</button>
+    <a asp-action="Index" asp-controller="AdminCoupons" class="btn btn-outline-secondary">Vyčistit</a>
+</form>
+
+<form method="post" asp-action="Create" asp-controller="AdminCoupons" class="mb-4 row g-2">
+    @Html.AntiForgeryToken()
+    <div class="col-md-4">
+        <input class="form-control" name="code" placeholder="Nový kód kupónu..." />
+    </div>
+    <div class="col-md-3">
+        <input class="form-control" name="bonus" type="number" step="1" min="1" placeholder="Bonus (Kč)" />
+    </div>
+    <div class="col-md-3">
+        <input class="form-control" name="dateExpiry" type="date" />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Přidat</button>
+    </div>
+</form>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Kód / Bonus (Kč) / Platný do / Akce</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Rows)
+        {
+            <tr>
+                <td>
+                    <form method="post" asp-action="Update" asp-controller="AdminCoupons" class="row g-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@c.Id" />
+                        <div class="col-md-4">
+                            <input class="form-control" name="code" value="@c.Code" />
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control" name="bonus" type="number" step="1" min="1" value="@c.Bonus" />
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control" name="dateExpiry" type="date"
+                                   value="@c.DateExpiry.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-2 text-end">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Uložit</button>
+                                <button type="submit"
+                                        formaction="@Url.Action("Delete", "AdminCoupons")"
+                                        formmethod="post"
+                                        name="id"
+                                        value="@c.Id"
+                                        class="btn btn-sm btn-outline-danger ms-1"
+                                        onclick="return confirm('Smazat tento kupón?');">
+                                    Smazat
+                                </button>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
