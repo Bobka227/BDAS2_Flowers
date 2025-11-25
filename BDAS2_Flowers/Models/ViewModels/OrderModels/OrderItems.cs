@@ -20,27 +20,23 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
         public int UserId { get; set; }
         public int DeliveryMethodId { get; set; }
         public int ShopId { get; set; }
-
-        public bool UseNewAddress { get; set; } = true;
+        public bool UseNewAddress { get; set; } = false;
         public int? AddressId { get; set; }
         public int PostalCode { get; set; }
         public string Street { get; set; } = "";
         public int HouseNumber { get; set; }
-
         public string PaymentType { get; set; } = "cash";
-
         public string? CardNumber { get; set; }
-
         public decimal? CashAccepted { get; set; }
-
         public string? CuponCode { get; set; }
-
+        public string? CuponFallbackType { get; set; } = "cash";
         public List<OrderItemVm> Items { get; set; } = new();
-
         public List<IdNameVm> DeliveryMethods { get; set; } = new();
         public List<IdNameVm> Shops { get; set; } = new();
         public List<IdNameVm> Addresses { get; set; } = new();
         public List<IdNameVm> Products { get; set; } = new();
+        public decimal EstimatedTotal { get; set; }
+        public decimal CartTotal { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext context)
         {
@@ -60,6 +56,7 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
             }
 
             var pt = PaymentType?.ToLowerInvariant();
+
             if (pt == "card")
             {
                 if (string.IsNullOrWhiteSpace(CardNumber) || CardNumber.Count(char.IsDigit) < 12)
@@ -80,6 +77,27 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
                     yield return new ValidationResult(
                         "Zadejte kód kupónu.",
                         new[] { nameof(CuponCode) });
+
+                var fb = CuponFallbackType?.ToLowerInvariant();
+                if (fb != "cash" && fb != "card")
+                    yield return new ValidationResult(
+                        "Vyberte způsob doplatku.",
+                        new[] { nameof(CuponFallbackType) });
+
+                if (fb == "cash")
+                {
+                    if (CashAccepted is null || CashAccepted <= 0)
+                        yield return new ValidationResult(
+                            "Zadejte přijatou hotovost.",
+                            new[] { nameof(CashAccepted) });
+                }
+                else if (fb == "card")
+                {
+                    if (string.IsNullOrWhiteSpace(CardNumber) || CardNumber.Count(char.IsDigit) < 12)
+                        yield return new ValidationResult(
+                            "Zadejte platné číslo karty (min. 12 číslic).",
+                            new[] { nameof(CardNumber) });
+                }
             }
 
             if (Items == null || Items.Count == 0 || Items.Any(i => i.ProductId <= 0 || i.Quantity <= 0))
@@ -88,7 +106,6 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
                     new[] { nameof(Items) });
         }
     }
-
 
     public class OrderItemDetailsVm
     {
@@ -123,7 +140,6 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
         public string Delivery { get; set; } = "";
         public string Shop { get; set; } = "";
         public decimal Total { get; set; }
-
         public string PaymentType { get; set; } = "";
         public string? PaymentMasked { get; set; }      
         public decimal Amount { get; set; }                
@@ -132,9 +148,7 @@ namespace BDAS2_Flowers.Models.ViewModels.OrderModels
         public decimal? CashReturned { get; set; }
         public decimal? CuponBonus { get; set; }
         public DateTime? CuponExpiry { get; set; }
-
         public List<OrderItemDetailsVm> Items { get; set; } = new();
         public List<string> StatusNames { get; set; } = new();
     }
-
 }
