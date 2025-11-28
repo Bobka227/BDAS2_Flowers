@@ -75,6 +75,15 @@
                                 Vyčistit (TRUNCATE)
                             </button>
                         </form>
+                        <form method="post" asp-controller="AdminHome" asp-action="ResetSequences">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                    title="Reset ID (sekvence) pro prázdné tabulky"
+                                    onclick="return confirm('Zkontrolovat a resetovat sekvence pro prázdné tabulky na 1?')">
+                                Reset ID (sekvence)
+                            </button>
+                        </form>
+
                     </div>
                 </div>
 

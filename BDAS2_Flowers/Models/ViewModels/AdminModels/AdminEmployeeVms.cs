@@ -45,3 +45,16 @@ public class AdminEmployeeEditVm
     [Display(Name = "Nadřízený")]
     public int? ManagerId { get; set; }
 }
+
+public class AdminEmployeeTreeRowVm
+{
+    public int Id { get; set; }
+    public string IndentedName { get; set; } = "";
+    public int Level { get; set; }
+
+    public string Manager { get; set; } = "";
+    public string RootName { get; set; } = "";
+    public string OrgPath { get; set; } = "";
+    public string Shop { get; set; } = "";
+    public string Position { get; set; } = "";
+}

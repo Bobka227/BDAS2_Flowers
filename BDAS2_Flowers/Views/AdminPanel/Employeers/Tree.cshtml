@@ -1,41 +1,124 @@
-﻿@model List<(int Id, string Name, int Level, string Manager)>
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@model List<AdminEmployeeTreeRowVm>
 
 @{
     ViewData["Title"] = "Strom zaměstnanců";
+
+    var employees = (IEnumerable<(int Id, string Name)>)
+        (ViewBag.Employees ?? new List<(int, string)>());
 }
 
 <div class="container py-4">
-    <h1 class="h4 mb-3">Strom zaměstnanců</h1>
+    @if (TempData["Msg"] is string msg && !string.IsNullOrWhiteSpace(msg))
+    {
+        <div class="alert alert-info">@msg</div>
+    }
 
-    <p class="text-muted">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Strom zaměstnanců</h1>
+
+        <a class="btn btn-outline-secondary"
+           asp-controller="AdminEmployeers"
+           asp-action="Index">
+            Zpět na seznam
+        </a>
+    </div>
+
+    <p class="text-muted mb-4">
         Zobrazuje hierarchii: kdo komu podléhá. Kliknutím na jméno otevřete editaci zaměstnance.
+        Níže můžete přesunout celý podstrom pod jiného manažera.
     </p>
 
-    <table class="table table-sm align-middle">
-        <thead>
-            <tr>
-                <th>Jméno</th>
-                <th>Manažer</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in Model)
-            {
-                var (id, name, level, manager) = row;
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <strong>Přesun podstromu</strong>
+        </div>
+        <div class="card-body">
+            <form asp-controller="AdminEmployeers"
+                  asp-action="MoveSubtree"
+                  method="post"
+                  class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
 
-                <tr>
-                    <td>
-                        <a asp-controller="AdminEmployeers"
-                           asp-action="Edit"
-                           asp-route-id="@id"
-                           class="text-decoration-none"
-                           style="padding-left:@((level - 1) * 20)px">
-                            @name
-                        </a>
-                    </td>
-                    <td>@(string.IsNullOrWhiteSpace(manager) ? "-" : manager)</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                <div class="col-md-5">
+                    <label class="form-label">Zaměstnanec (kořen podstromu)</label>
+                    <select name="empId" class="form-select">
+                        @foreach (var e in employees)
+                        {
+                            <option value="@e.Id">@e.Name (@e.Id)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Nový manažer</label>
+                    <select name="newManagerId" class="form-select">
+                        @foreach (var e in employees)
+                        {
+                            <option value="@e.Id">@e.Name (@e.Id)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-brand w-100">
+                        Přesunout
+                    </button>
+                </div>
+
+                <div class="col-12">
+               
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <strong>Hierarchie zaměstnanců</strong>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40%;">Jméno</th>
+                        <th>Kořen (oddělení)</th>
+                        <th>Celá cesta</th>
+                        <th>Prodejna</th>
+                        <th>Pozice</th>
+                        <th>Manažer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-controller="AdminEmployeers"
+                                   asp-action="Edit"
+                                   asp-route-id="@row.Id"
+                                   class="text-decoration-none"
+                                   style="padding-left:@((row.Level - 1) * 20)px">
+                                    @row.IndentedName
+                                </a>
+                            </td>
+                            <td>
+                                @(string.IsNullOrWhiteSpace(row.RootName)
+                                                            ? "-"
+                                                            : row.RootName)
+                                                                       </td>
+                                                                       <td class="small text-muted">
+                                @(string.IsNullOrWhiteSpace(row.OrgPath)
+                                                            ? "-"
+                                                            : row.OrgPath)
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Shop) ? "-" : row.Shop)</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Position) ? "-" : row.Position)</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Manager) ? "-" : row.Manager)</td>
+                    </tr>
+                                        }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>

@@ -8,12 +8,57 @@
         .OrderBy(g => g.Key);
 }
 
+<style>
+    .dbobj-link {
+        text-decoration: none;
+        color: var(--bs-link-color);
+        cursor: pointer;
+    }
+
+        .dbobj-link:hover {
+            text-decoration: none;
+            color: var(--bs-link-hover-color);
+        }
+
+    .dbobj-source {
+        font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;
+        font-size: .85rem;
+        background: #1e1e1e;
+        color: #f5f5f5;
+        border-radius: .75rem;
+        padding: 1rem 1.25rem;
+        margin-top: .25rem;
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden; 
+        transition: max-height .3s ease, opacity .3s ease;
+    }
+
+        .dbobj-source.open {
+            max-height: 70vh;
+            opacity: 1;
+            overflow: auto; 
+        }
+
+        .dbobj-source pre {
+            margin: 0;
+            white-space: pre; 
+        }
+
+
+    tr.dbobj-source-row td {
+        border-top: none;
+        padding-top: 0;
+        padding-bottom: .5rem;
+    }
+</style>
+
 <h1 class="mb-4">Databázové objekty (systemový katalog)</h1>
 
 <p class="text-muted">
     Výpis všech objektů ve schématu <code>@User.Identity?.Name</code>,
-    které jsou použité v semestrální práci. Data jsou čtena z
-    <code>USER_OBJECTS</code>.
+    které jsou použité v semestrální práci.
+    Data jsou čtena z <code>ST72861.VW_DB_OBJECTS_ADMIN</code>.
 </p>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -27,8 +72,6 @@
         </a>
     </div>
 </div>
-
-
 
 @foreach (var group in groups)
 {
@@ -55,8 +98,18 @@
                     <tbody>
                         @foreach (var o in group)
                         {
+                            var safeId = $"{group.Key}_{o.ObjectName}".Replace(" ", "_");
+
                             <tr>
-                                <td><code>@o.ObjectName</code></td>
+                                <td>
+                                    <a href="#"
+                                       class="dbobj-link"
+                                       data-object-type="@group.Key"
+                                       data-object-name="@o.ObjectName"
+                                       data-target="#src-@safeId">
+                                        <code>@o.ObjectName</code>
+                                    </a>
+                                </td>
                                 <td>@(string.IsNullOrWhiteSpace(o.Status) ? "-" : o.Status)</td>
                                 <td>
                                     @if (o.Created.HasValue)
@@ -79,10 +132,69 @@
                                     }
                                 </td>
                             </tr>
+                            <tr class="dbobj-source-row">
+                                <td colspan="4">
+                                    <div class="dbobj-source"
+                                         id="src-@safeId"
+                                         data-object-type="@group.Key"
+                                         data-object-name="@o.ObjectName">
+                                        <pre><code>// Klikněte na název objektu pro načtení jeho definice…</code></pre>
+                                    </div>
+                                </td>
+                            </tr>
                         }
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const links = document.querySelectorAll(".dbobj-link");
+
+            links.forEach(link => {
+                link.addEventListener("click", async (e) => {
+                    e.preventDefault();
+
+                    const targetSelector = link.dataset.target;
+                    const box = document.querySelector(targetSelector);
+                    if (!box) return;
+
+                    if (!box.dataset.loaded) {
+                        const type = link.dataset.objectType;
+                        const name = link.dataset.objectName;
+
+                        const url = '@Url.Action("SourceText", "AdminDbObjects")'
+                            + '?type=' + encodeURIComponent(type)
+                            + '&name=' + encodeURIComponent(name);
+
+                        const codeEl = box.querySelector("code");
+                        codeEl.textContent = "Načítám definici objektu…";
+
+                        try {
+                            const resp = await fetch(url, {
+                                headers: { "X-Requested-With": "XMLHttpRequest" }
+                            });
+
+                            if (!resp.ok) {
+                                codeEl.textContent =
+                                    "Chyba při načítání zdrojového kódu (" + resp.status + ").";
+                            } else {
+                                const text = await resp.text();
+                                codeEl.textContent = text;
+                                box.dataset.loaded = "1";
+                            }
+                        } catch (err) {
+                            codeEl.textContent = "Chyba při komunikaci se serverem.";
+                        }
+                    }
+
+                    box.classList.toggle("open");
+                });
+            });
+        });
+    </script>
 }
