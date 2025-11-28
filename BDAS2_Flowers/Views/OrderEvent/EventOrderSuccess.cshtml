@@ -10,14 +10,15 @@
     <div class="mt-4">
         @if (eventId is int etid && etid > 0)
         {
-            <a class="btn btn-brand w-100"
+            <a class="btn btn-brand w-100 text-white"
                asp-controller="Events" asp-action="Type" asp-route-id="@etid">
                 Zpět na události
             </a>
         }
         else
         {
-            <a class="btn btn-brand w-100" asp-controller="Home" asp-action="Index">
+            <a class="btn btn-brand w-100 text-white"
+               asp-controller="Home" asp-action="Index">
                 Zpět na hlavní stránku
             </a>
         }

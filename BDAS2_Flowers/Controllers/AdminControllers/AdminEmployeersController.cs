@@ -189,32 +189,92 @@ public class AdminEmployeersController : Controller
     [HttpGet("tree")]
     public async Task<IActionResult> Tree()
     {
-        var rows = new List<(int Id, string Name, int Level, string Manager)>();
+        var rows = new List<AdminEmployeeTreeRowVm>();
+        var employees = new List<(int Id, string Name)>();
 
         await using var conn = await _db.CreateOpenAsync();
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-      SELECT t.ID,
-             t.INDENTED_NAME,
-             t.LVL,
-             m.FIRSTNAME || ' ' || m.LASTNAME AS MANAGER_NAME
-        FROM VW_EMPLOYEER_TREE t
-        LEFT JOIN EMPLOYEER m ON m.EMPLOYEERID = t.MANAGERID
-       ORDER BY t.LVL, t.LASTNAME, t.FIRSTNAME";
 
-        await using var r = await cmd.ExecuteReaderAsync();
-        while (await r.ReadAsync())
+        await using (var cmd = conn.CreateCommand())
         {
-            rows.Add((
-                DbRead.GetInt32(r, 0),
-                r.GetString(1),
-                DbRead.GetInt32(r, 2),
-                r.IsDBNull(3) ? "" : r.GetString(3)
-            ));
+            cmd.CommandText = @"
+          SELECT t.ID,
+                 t.INDENTED_NAME,
+                 t.LVL,
+                 t.ROOT_NAME,
+                 t.ORG_PATH,
+                 t.SHOP_NAME,
+                 t.POSITION_NAME,
+                 m.FIRSTNAME || ' ' || m.LASTNAME AS MANAGER_NAME
+            FROM VW_EMPLOYEER_TREE t
+            LEFT JOIN EMPLOYEER m ON m.EMPLOYEERID = t.MANAGERID
+           ORDER BY t.ROOT_ID, t.LVL, t.LASTNAME, t.FIRSTNAME";
+
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                rows.Add(new AdminEmployeeTreeRowVm
+                {
+                    Id = DbRead.GetInt32(r, 0),
+                    IndentedName = r.GetString(1),
+                    Level = DbRead.GetInt32(r, 2),
+                    RootName = r.IsDBNull(3) ? "" : r.GetString(3),
+                    OrgPath = r.IsDBNull(4) ? "" : r.GetString(4),
+                    Shop = r.IsDBNull(5) ? "" : r.GetString(5),
+                    Position = r.IsDBNull(6) ? "" : r.GetString(6),
+                    Manager = r.IsDBNull(7) ? "" : r.GetString(7)
+                });
+            }
         }
+
+        await using (var cmd2 = conn.CreateCommand())
+        {
+            cmd2.CommandText = @"
+          SELECT EMPLOYEERID, FIRSTNAME || ' ' || LASTNAME
+            FROM EMPLOYEER
+           ORDER BY LASTNAME, FIRSTNAME";
+
+            await using var r2 = await cmd2.ExecuteReaderAsync();
+            while (await r2.ReadAsync())
+            {
+                employees.Add((DbRead.GetInt32(r2, 0), r2.GetString(1)));
+            }
+        }
+
+        ViewBag.Employees = employees;
 
         return View("/Views/AdminPanel/Employeers/Tree.cshtml", rows);
     }
+
+    [HttpPost("move-subtree")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MoveSubtree(int empId, int newManagerId)
+    {
+        await using var conn = await _db.CreateOpenAsync();
+        await using var cmd = new OracleCommand("ST72861.PRC_EMP_MOVE_SUBTREE", (OracleConnection)conn)
+        {
+            CommandType = CommandType.StoredProcedure,
+            BindByName = true
+        };
+
+        cmd.Parameters.Add("p_emp_id", OracleDbType.Int32).Value = empId;
+        cmd.Parameters.Add("p_new_manager_id", OracleDbType.Int32).Value = newManagerId;
+        cmd.Parameters.Add("p_actor", OracleDbType.Varchar2).Value =
+            User.Identity?.Name ?? "admin";
+
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+            TempData["Msg"] = "Podstrom zaměstnance byl úspěšně přesunut.";
+        }
+        catch (OracleException ex)
+        {
+            TempData["Msg"] = "Chyba při přesunu podstromu: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Tree));
+    }
+
+
 
 
     private async Task FillLookupsAsync(AdminEmployeeEditVm vm)

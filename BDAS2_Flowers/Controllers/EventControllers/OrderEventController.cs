@@ -156,11 +156,43 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             };
 
             await using var con = (OracleConnection)await _db.CreateOpenAsync();
+
             await using (var cmd = con.CreateCommand())
             {
                 cmd.CommandText = "SELECT ID, NAME FROM VW_SHOPS ORDER BY NAME";
                 await using var rd = await cmd.ExecuteReaderAsync();
                 vm.Shops = ReadIdName(rd);
+            }
+
+            await using (var cmd = con.CreateCommand())
+            {
+                cmd.BindByName = true;
+              
+                cmd.CommandText = @"
+            SELECT PRODUCTID, TITLE, SUBTITLE, PRICEFROM
+              FROM VW_CATALOG_PRODUCTS
+             WHERE TITLE NOT LIKE '~~ARCHIVED~~ %'
+             ORDER BY PRICEFROM DESC
+             FETCH FIRST 12 ROWS ONLY";
+
+                await using var r = await cmd.ExecuteReaderAsync();
+                var products = new List<EventProductChoiceVm>();
+                int index = 0;
+                while (await r.ReadAsync())
+                {
+                    products.Add(new EventProductChoiceVm
+                    {
+                        ProductId = AsInt(r.GetValue(0)),
+                        Title = Convert.ToString(r.GetValue(1)) ?? "",
+                        Subtitle = Convert.ToString(r.GetValue(2)),
+                        PriceFrom = r.IsDBNull(3) ? 0 : (decimal)r.GetDecimal(3),
+                        Recommended = index < 4,
+                        Quantity = 0
+                    });
+                    index++;
+                }
+
+                vm.Products = products;
             }
 
             return View("OrderForm", vm);
@@ -180,16 +212,74 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 ModelState.AddModelError(nameof(m.PostalCode), "PSČ je povinné.");
             if (m.ShopId <= 0)
                 ModelState.AddModelError(nameof(m.ShopId), "Vyberte prodejnu.");
+            if (m.Quantity is null || m.Quantity < 1)
+                ModelState.AddModelError(nameof(m.Quantity), "Počet balíčků musí být alespoň 1.");
+
+            var payType = (m.PaymentType ?? "card").ToLowerInvariant();
+
+            if (payType == "card")
+            {
+                if (string.IsNullOrWhiteSpace(m.CardNumber))
+                {
+                    ModelState.AddModelError(nameof(m.CardNumber), "Zadejte číslo karty.");
+                }
+                else
+                {
+                    var digits = new string(m.CardNumber.Where(char.IsDigit).ToArray());
+                    if (digits.Length < 12 || digits.Length > 19)
+                    {
+                        ModelState.AddModelError(nameof(m.CardNumber),
+                            "Číslo karty musí mít 12–19 číslic.");
+                    }
+                }
+            }
+            else if (payType == "cupon")
+            {
+                if (string.IsNullOrWhiteSpace(m.CouponCode))
+                {
+                    ModelState.AddModelError(nameof(m.CouponCode), "Zadejte kód kuponu.");
+                }
+            }
 
             if (!ModelState.IsValid)
             {
                 await using var reload = (OracleConnection)await _db.CreateOpenAsync();
+
                 await using (var cmd = reload.CreateCommand())
                 {
                     cmd.CommandText = "SELECT ID, NAME FROM VW_SHOPS ORDER BY NAME";
                     await using var rd = await cmd.ExecuteReaderAsync();
                     m.Shops = ReadIdName(rd);
                 }
+
+                await using (var cmd = reload.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                SELECT PRODUCTID, TITLE, SUBTITLE, PRICEFROM
+                  FROM VW_CATALOG_PRODUCTS
+                 WHERE TITLE NOT LIKE '~~ARCHIVED~~ %'
+                 ORDER BY PRICEFROM DESC
+                 FETCH FIRST 12 ROWS ONLY";
+
+                    await using var r = await cmd.ExecuteReaderAsync();
+                    var products = new List<EventProductChoiceVm>();
+                    int index = 0;
+                    while (await r.ReadAsync())
+                    {
+                        products.Add(new EventProductChoiceVm
+                        {
+                            ProductId = AsInt(r.GetValue(0)),
+                            Title = Convert.ToString(r.GetValue(1)) ?? "",
+                            Subtitle = Convert.ToString(r.GetValue(2)),
+                            PriceFrom = r.IsDBNull(3) ? 0 : (decimal)r.GetDecimal(3),
+                            Recommended = index < 4,
+                            Quantity = 0
+                        });
+                        index++;
+                    }
+                    m.Products = products;
+                }
+
                 return View("OrderForm", m);
             }
 
@@ -208,16 +298,22 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     cmdAddr.Parameters.Add("p_postalcode", OracleDbType.Int32).Value = m.PostalCode;
                     cmdAddr.Parameters.Add("p_street", OracleDbType.Varchar2, 200).Value = m.Street!.Trim();
                     cmdAddr.Parameters.Add("p_housenumber", OracleDbType.Int32).Value = m.HouseNumber;
-                    var o = new OracleParameter("o_address_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+                    var o = new OracleParameter("o_address_id", OracleDbType.Int32)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
                     cmdAddr.Parameters.Add(o);
                     await cmdAddr.ExecuteNonQueryAsync();
                     addressId = AsInt(o.Value);
                 }
 
-                var deliveryMethodId = await GetOrCreateDeliveryMethodId(con, (OracleTransaction)tx, "On-site Event");
+                var deliveryMethodId = await GetOrCreateDeliveryMethodId(
+                    con, (OracleTransaction)tx, "On-site Event");
 
-                var productId = await ResolveEventOrganizationProductId(con, m.EventTypeId, (OracleTransaction)tx);
+                var baseProductId = await ResolveEventOrganizationProductId(
+                    con, m.EventTypeId, (OracleTransaction)tx);
 
+                string? orderNo;
                 await using (var cmd = con.CreateCommand())
                 {
                     cmd.Transaction = (OracleTransaction)tx;
@@ -231,20 +327,123 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     cmd.Parameters.Add("p_deliverymethodid", OracleDbType.Int32).Value = deliveryMethodId;
                     cmd.Parameters.Add("p_shopid", OracleDbType.Int32).Value = m.ShopId;
                     cmd.Parameters.Add("p_addressid", OracleDbType.Int32).Value = addressId;
-                    cmd.Parameters.Add("p_payment_type", OracleDbType.Varchar2, 5).Value = (m.PaymentType ?? "cash").ToLowerInvariant();
-                    cmd.Parameters.Add("p_product_id", OracleDbType.Int32).Value = productId;
-                    cmd.Parameters.Add("p_quantity", OracleDbType.Int32).Value = 1; 
-                    cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100).Value = (User?.Identity?.Name ?? "web");
+                    cmd.Parameters.Add("p_payment_type", OracleDbType.Varchar2, 5).Value = payType;
+                    cmd.Parameters.Add("p_product_id", OracleDbType.Int32).Value = baseProductId;
+                    cmd.Parameters.Add("p_quantity", OracleDbType.Int32).Value = m.Quantity;
+                    cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100)
+                        .Value = (User?.Identity?.Name ?? "web");
 
-                    var oOrderNo = new OracleParameter("o_order_no", OracleDbType.Varchar2, 50) { Direction = ParameterDirection.Output };
+                    var oOrderNo = new OracleParameter("o_order_no", OracleDbType.Varchar2, 50)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
                     cmd.Parameters.Add(oOrderNo);
 
                     await cmd.ExecuteNonQueryAsync();
-                    TempData["OrderNo"] = oOrderNo.Value?.ToString();
+                    orderNo = oOrderNo.Value?.ToString();
+                    TempData["OrderNo"] = orderNo;
+                    TempData["EventTypeId"] = m.EventTypeId;
+                }
+
+                if (string.IsNullOrWhiteSpace(orderNo))
+                    throw new InvalidOperationException("Nepodařilo se získat kód objednávky.");
+
+                int orderId;
+                await using (var cmdOrderId = con.CreateCommand())
+                {
+                    cmdOrderId.Transaction = (OracleTransaction)tx;
+                    cmdOrderId.BindByName = true;
+                    cmdOrderId.CommandText = "SELECT ST72861.PKG_ORDER_CODE.TRY_GET_ID(:p) FROM dual";
+                    cmdOrderId.Parameters.Add("p", OracleDbType.Varchar2, 50).Value = orderNo!;
+                    var res = await cmdOrderId.ExecuteScalarAsync();
+                    orderId = AsInt(res);
+                }
+
+                if (orderId <= 0)
+                    throw new InvalidOperationException("Neplatné interní ID objednávky.");
+
+                await using (var cmdBase = new OracleCommand("ST72861.PRC_ADD_ITEM", con))
+                {
+                    cmdBase.Transaction = (OracleTransaction)tx;
+                    cmdBase.CommandType = CommandType.StoredProcedure;
+                    cmdBase.BindByName = true;
+
+                    cmdBase.Parameters.Add("p_order_id", OracleDbType.Int32).Value = orderId;
+                    cmdBase.Parameters.Add("p_productid", OracleDbType.Int32).Value = baseProductId;
+                    cmdBase.Parameters.Add("p_quantity", OracleDbType.Int32).Value = m.Quantity;
+
+                    await cmdBase.ExecuteNonQueryAsync();
+                }
+
+                var selectedProducts = (m.Products ?? new List<EventProductChoiceVm>())
+                    .Where(p => p.Quantity > 0)
+                    .ToList();
+
+                if (selectedProducts.Any())
+                {
+                    foreach (var p in selectedProducts)
+                    {
+                        await using var cmdAdd = new OracleCommand("ST72861.PRC_ADD_ITEM", con)
+                        {
+                            Transaction = (OracleTransaction)tx,
+                            CommandType = CommandType.StoredProcedure,
+                            BindByName = true
+                        };
+                        cmdAdd.Parameters.Add("p_order_id", OracleDbType.Int32).Value = orderId;
+                        cmdAdd.Parameters.Add("p_productid", OracleDbType.Int32).Value = p.ProductId;
+                        cmdAdd.Parameters.Add("p_quantity", OracleDbType.Int32).Value = p.Quantity;
+
+                        await cmdAdd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                await using (var cmdRecalc = new OracleCommand("ST72861.PRC_FINALIZE_ORDER_XCUR", con))
+                {
+                    cmdRecalc.Transaction = (OracleTransaction)tx;
+                    cmdRecalc.CommandType = CommandType.StoredProcedure;
+                    cmdRecalc.BindByName = true;
+                    cmdRecalc.Parameters.Add("p_order_id", OracleDbType.Int32).Value = orderId;
+                    await cmdRecalc.ExecuteNonQueryAsync();
+                }
+
+                int? cardLast4 = null;
+                if (payType == "card" && !string.IsNullOrWhiteSpace(m.CardNumber))
+                {
+                    var digits = new string(m.CardNumber.Where(char.IsDigit).ToArray());
+                    var last4Str = digits.Length >= 4
+                        ? digits.Substring(digits.Length - 4)
+                        : digits;
+                    if (int.TryParse(last4Str, out var last4Int))
+                        cardLast4 = last4Int;
+                }
+
+                await using (var cmdPay = con.CreateCommand())
+                {
+                    cmdPay.Transaction = (OracleTransaction)tx;
+                    cmdPay.BindByName = true;
+                    cmdPay.CommandType = CommandType.StoredProcedure;
+                    cmdPay.CommandText = "ST72861.PRC_EVENT_PAYMENT_EXTEND";
+
+                    cmdPay.Parameters.Add("p_order_no", OracleDbType.Varchar2, 50).Value = orderNo!;
+                    cmdPay.Parameters.Add("p_payment_type", OracleDbType.Varchar2, 20).Value = payType;
+                    cmdPay.Parameters.Add("p_coupon_code", OracleDbType.Varchar2, 100)
+                        .Value = (object?)m.CouponCode ?? DBNull.Value;
+                    cmdPay.Parameters.Add("p_card_last4", OracleDbType.Int32)
+                        .Value = cardLast4.HasValue ? (object)cardLast4.Value : DBNull.Value;
+                    cmdPay.Parameters.Add("p_cash_accepted", OracleDbType.Int32)
+                        .Value = DBNull.Value;
+
+                    var oStatus = new OracleParameter("o_status", OracleDbType.Int32)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    cmdPay.Parameters.Add(oStatus);
+
+                    await cmdPay.ExecuteNonQueryAsync();
                 }
 
                 await tx.CommitAsync();
-                return RedirectToAction("EventOrderSuccess");
+                return RedirectToAction(nameof(EventOrderSuccess));
             }
             catch (OracleException ex)
             {
@@ -258,15 +457,50 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     await using var rd = await cmd.ExecuteReaderAsync();
                     m.Shops = ReadIdName(rd);
                 }
+
+                await using (var cmd = reload.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                SELECT PRODUCTID, TITLE, SUBTITLE, PRICEFROM
+                  FROM VW_CATALOG_PRODUCTS
+                 WHERE TITLE NOT LIKE '~~ARCHIVED~~ %'
+                 ORDER BY PRICEFROM DESC
+                 FETCH FIRST 12 ROWS ONLY";
+
+                    await using var r = await cmd.ExecuteReaderAsync();
+                    var products = new List<EventProductChoiceVm>();
+                    int index = 0;
+                    while (await r.ReadAsync())
+                    {
+                        products.Add(new EventProductChoiceVm
+                        {
+                            ProductId = AsInt(r.GetValue(0)),
+                            Title = Convert.ToString(r.GetValue(1)) ?? "",
+                            Subtitle = Convert.ToString(r.GetValue(2)),
+                            PriceFrom = r.IsDBNull(3) ? 0 : (decimal)r.GetDecimal(3),
+                            Recommended = index < 4,
+                            Quantity = 0
+                        });
+                        index++;
+                    }
+                    m.Products = products;
+                }
+
                 return View("OrderForm", m);
             }
         }
 
+
+
+
         [HttpGet]
         public IActionResult EventOrderSuccess()
         {
-            ViewBag.OrderNo = TempData["OrderNo"] as string;
-            return View();
+            ViewData["OrderNo"] = TempData["OrderNo"];
+            ViewData["EventTypeId"] = TempData["EventTypeId"];
+
+            return View(); 
         }
+
     }
 }

@@ -56,6 +56,23 @@ public class AdminHomeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [ValidateAntiForgeryToken]
+    [HttpPost("sequences/reset")]
+    public async Task<IActionResult> ResetSequences()
+    {
+        await using var con = await _db.CreateOpenAsync();
+        await using var cmd = new OracleCommand(
+            "BEGIN ST72861.PKG_RESET.RESET_ALL_SEQUENCES; END;",
+            (OracleConnection)con)
+        {
+            CommandType = CommandType.Text
+        };
+
+        await cmd.ExecuteNonQueryAsync();
+
+        TempData["DiagOk"] = "Sekvence byly zkontrolovány a pro prázdné tabulky resetovány na 1.";
+        return RedirectToAction(nameof(Index));
+    }
 
 
     private async Task<LogsPageVm> LoadLogsAsync(int page, int size)
