@@ -26,7 +26,7 @@ namespace BDAS2_Flowers.Data
 
             await con.OpenAsync();
 
-            var actor = ResolveActor(); 
+            var actor = ResolveActor();
             await using (var cmd = new OracleCommand("begin dbms_session.set_identifier(:id); end;", con))
             {
                 cmd.BindByName = true;
@@ -36,6 +36,8 @@ namespace BDAS2_Flowers.Data
 
             return con;
         }
+
+
 
         private string ResolveActor()
         {

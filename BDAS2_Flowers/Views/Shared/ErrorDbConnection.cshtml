@@ -1,0 +1,17 @@
+﻿@{
+    ViewData["Title"] = "Chyba připojení k databázi";
+}
+
+<div class="container text-center mt-5">
+    <h1 class="display-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Chyba připojení</h1>
+    <p class="lead mt-4">
+        Aplikaci se nepodařilo připojit k databázi Oracle.<br />
+        Zkontrolujte prosím, zda je databázový server spuštěný a<br />
+        zda jsou správně nastavené přihlašovací údaje v <code>appsettings.json</code>.
+    </p>
+    <p class="text-muted mt-3">Kód chyby: ORA-12545 (target host does not exist)</p>
+
+    <a href="/" class="btn btn-primary mt-4">
+        <i class="bi bi-arrow-clockwise"></i> Zkusit znovu
+    </a>
+</div>
