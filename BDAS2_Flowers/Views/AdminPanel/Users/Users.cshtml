@@ -58,7 +58,21 @@
                                 </button>
                             </form>
                         }
+
+                        @if (!string.Equals(u.Email, currentEmail, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <form method="post"
+                                  action="/admin/users/@u.Email/delete"
+                                  class="d-inline ms-1"
+                                  onsubmit="return confirm('Opravdu smazat uživatele @u.Email?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    Smazat
+                                </button>
+                            </form>
+                        }
                     </td>
+
 
                 </tr>
             }

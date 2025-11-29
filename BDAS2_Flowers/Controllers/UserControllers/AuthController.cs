@@ -20,19 +20,24 @@ public class AuthController : Controller
 
     [HttpGet("/auth/register")]
     public IActionResult Register() => View(new RegisterVm());
-
     [ValidateAntiForgeryToken]
     [HttpPost("/auth/register")]
     public async Task<IActionResult> Register(RegisterVm vm)
     {
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+            return View(vm);
 
         await using var conn = await _db.CreateOpenAsync();
 
         await using (var c = conn.CreateCommand())
         {
             c.CommandText = "SELECT COUNT(*) FROM \"USER\" WHERE email = :email";
-            c.Parameters.Add(new OracleParameter("email", OracleDbType.Varchar2, vm.Email.ToLower(), ParameterDirection.Input));
+            c.Parameters.Add(new OracleParameter(
+                "email",
+                OracleDbType.Varchar2,
+                vm.Email.ToLower(),
+                ParameterDirection.Input));
+
             var exists = Convert.ToInt32(await c.ExecuteScalarAsync()) > 0;
             if (exists)
             {
@@ -49,18 +54,44 @@ public class AuthController : Controller
         }
 
         var hash = _hasher.Hash(vm.Password);
+
         await using (var c = conn.CreateCommand())
         {
             c.CommandText = @"
-              INSERT INTO ""USER"" (userid, email, passwordhash, createdat, roleid, firstname, lastname, phone)
-              VALUES (:id, :email, :phash, SYSDATE, :role, :fn, :ln, :phone)";
+          INSERT INTO ""USER"" (
+              userid,
+              email,
+              passwordhash,
+              createdat,
+              roleid,
+              firstname,
+              lastname,
+              phone
+          )
+          VALUES (
+              :id,
+              :email,
+              :phash,
+              SYSDATE,
+              :role,
+              :fn,
+              :ln,
+              :phone
+          )";
+
             c.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, newId, ParameterDirection.Input));
             c.Parameters.Add(new OracleParameter("email", OracleDbType.Varchar2, vm.Email.ToLower(), ParameterDirection.Input));
             c.Parameters.Add(new OracleParameter("phash", OracleDbType.Varchar2, hash, ParameterDirection.Input));
             c.Parameters.Add(new OracleParameter("role", OracleDbType.Int32, 1, ParameterDirection.Input));
             c.Parameters.Add(new OracleParameter("fn", OracleDbType.Varchar2, vm.FirstName, ParameterDirection.Input));
             c.Parameters.Add(new OracleParameter("ln", OracleDbType.Varchar2, vm.LastName, ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("phone", OracleDbType.Int32, int.Parse(vm.Phone), ParameterDirection.Input));
+
+          
+            c.Parameters.Add(new OracleParameter(
+                "phone",
+                OracleDbType.Varchar2,
+                vm.Phone,
+                ParameterDirection.Input));
 
             await c.ExecuteNonQueryAsync();
         }
@@ -68,6 +99,7 @@ public class AuthController : Controller
         await SignInAsync(newId, vm.Email.ToLower(), "Customer", vm.FirstName, vm.LastName);
         return RedirectToAction("Index", "Home");
     }
+
 
     [HttpGet("/auth/login")]
     public IActionResult Login(string? returnUrl = null) => View(new LoginVm { ReturnUrl = returnUrl });
