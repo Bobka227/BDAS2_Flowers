@@ -20,18 +20,30 @@ public class AdminUsersController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var rows = new List<(string Email, string Name, string Role, int Orders)>();
+        var rows = new List<(string Email, string Name, string Role, int Orders, string Segment)>();
+
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT
-                            FROM VW_USERS_ADMIN
-                            ORDER BY FULLNAME";
+        cmd.CommandText = @"
+        SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT, SEGMENT
+        FROM ST72861.VW_USERS_ADMIN
+        ORDER BY FULLNAME";
+
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
-            rows.Add((r.GetString(0), r.GetString(1), r.GetString(2), DbRead.GetInt32(r, 3)));
+        {
+            rows.Add((
+                Email: r.GetString(0),
+                Name: r.GetString(1),
+                Role: r.GetString(2),
+                Orders: DbRead.GetInt32(r, 3),
+                Segment: r.IsDBNull(4) ? "" : r.GetString(4)
+            ));
+        }
 
         return View("/Views/AdminPanel/Users/Users.cshtml", rows);
     }
+
 
     [ValidateAntiForgeryToken]
     [HttpPost("{email}/role")]

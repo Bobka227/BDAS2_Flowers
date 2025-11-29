@@ -29,13 +29,13 @@
         </div>
     </div>
 
-
     <table class="table table-sm align-middle">
         <thead>
             <tr>
                 <th>Jméno</th>
                 <th>Datum nástupu</th>
                 <th>Plat</th>
+                <th>Plat týmu</th>
                 <th>Prodejna</th>
                 <th>Pozice</th>
                 <th>Nadřízený</th>
@@ -49,6 +49,11 @@
                     <td>@e.FirstName @e.LastName</td>
                     <td>@e.EmploymentDate.ToString("d")</td>
                     <td>@e.Salary.ToString("0 Kč")</td>
+                    <td>
+                        <span title="Součet platů zaměstnance a všech jeho podřízených (FN_EMP_SUBTREE_SALARY)">
+                            @e.TeamSalary.ToString("0 Kč")
+                        </span>
+                    </td>
                     <td>@e.Shop</td>
                     <td>@e.Position</td>
                     <td>@e.Manager</td>

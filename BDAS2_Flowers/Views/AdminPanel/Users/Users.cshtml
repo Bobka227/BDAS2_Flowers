@@ -1,5 +1,5 @@
 ﻿@using System.Security.Claims
-@model List<(string Email,string Name,string Role,int Orders)>
+@model List<(string Email,string Name,string Role,int Orders,string Segment)>
 
 @{
     ViewData["Title"] = "Uživatelé";
@@ -15,11 +15,29 @@
     <h1 class="h4 mb-3">Uživatelé</h1>
     <table class="table table-sm align-middle">
         <thead>
-            <tr><th>E-mail</th><th>Jméno</th><th>Role</th><th>Objednávek</th><th class="text-end">Akce</th></tr>
+            <tr>
+                <th>E-mail</th>
+                <th>Jméno</th>
+                <th>Role</th>
+                <th>Objednávek</th>
+                <th>Segment</th>
+                <th class="text-end">Akce</th>
+            </tr>
         </thead>
         <tbody>
             @foreach (var u in Model)
             {
+                var seg = (u.Segment ?? "").ToUpperInvariant();
+                var badgeClass = seg switch
+                {
+                    "GOLD" => "bg-warning text-dark",      
+                    "SILVER" => "bg-secondary",            
+                    "BRONZE" => "bg-brown text-light",      
+                    "NEW" => "bg-primary",              
+                    "INACTIVE" => "bg-dark",               
+                    _ => "bg-light text-muted"
+                };
+
                 <tr>
                     <td>
                         <a href="/admin/users/@u.Email/orders">@u.Email</a>
@@ -27,6 +45,11 @@
                     <td>@u.Name</td>
                     <td>@u.Role</td>
                     <td>@u.Orders</td>
+                    <td>
+                        <span class="badge @badgeClass">
+                            @u.Segment
+                        </span>
+                    </td>
                     <td class="text-end">
                         @if (u.Role == "Admin")
                         {
@@ -72,10 +95,14 @@
                             </form>
                         }
                     </td>
-
-
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+<style>
+    .badge.bg-brown {
+        background-color: #8b5a2b;
+    }
+</style>
