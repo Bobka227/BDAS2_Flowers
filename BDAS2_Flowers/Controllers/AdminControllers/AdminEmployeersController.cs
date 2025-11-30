@@ -22,10 +22,10 @@ public class AdminEmployeersController : Controller
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-          SELECT ID, FIRSTNAME, LASTNAME, EMPLOYMENTDATE, SALARY,
-                 SHOP, POSITION, MANAGER
-            FROM VW_ADMIN_EMPLOYEERS
-           ORDER BY LASTNAME, FIRSTNAME";
+            SELECT ID, FIRSTNAME, LASTNAME, EMPLOYMENTDATE, SALARY,
+                 SHOP, POSITION, MANAGER, TEAM_SALARY
+            FROM ST72861.VW_ADMIN_EMPLOYEERS
+            ORDER BY LASTNAME, FIRSTNAME";
 
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
@@ -39,12 +39,14 @@ public class AdminEmployeersController : Controller
                 Salary = (decimal)r.GetDecimal(4),
                 Shop = r.IsDBNull(5) ? "" : r.GetString(5),
                 Position = r.IsDBNull(6) ? "" : r.GetString(6),
-                Manager = r.IsDBNull(7) ? "" : r.GetString(7)
+                Manager = r.IsDBNull(7) ? "" : r.GetString(7),
+                TeamSalary = r.IsDBNull(8) ? 0 : (decimal)r.GetDecimal(8)
             });
         }
 
         return View("/Views/AdminPanel/Employeers/Index.cshtml", rows);
     }
+
 
     [HttpGet("create")]
     public async Task<IActionResult> Create()

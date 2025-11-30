@@ -12,7 +12,10 @@ public class AdminEmployeeRowVm
     public string Shop { get; set; } = "";
     public string Position { get; set; } = "";
     public string Manager { get; set; } = "";
+
+    public decimal TeamSalary { get; set; }
 }
+
 
 public class AdminEmployeeEditVm
 {

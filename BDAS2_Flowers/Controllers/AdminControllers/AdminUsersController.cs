@@ -17,24 +17,34 @@ public class AdminUsersController : Controller
     private readonly IDbFactory _db;
     public AdminUsersController(IDbFactory db) => _db = db;
 
-    // GET /admin/users
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var rows = new List<(string Email, string Name, string Role, int Orders)>();
+        var rows = new List<(string Email, string Name, string Role, int Orders, string Segment)>();
+
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT
-                            FROM VW_USERS_ADMIN
-                            ORDER BY FULLNAME";
+        cmd.CommandText = @"
+        SELECT EMAIL, FULLNAME, ROLE_NAME, ORDER_COUNT, SEGMENT
+        FROM ST72861.VW_USERS_ADMIN
+        ORDER BY FULLNAME";
+
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
-            rows.Add((r.GetString(0), r.GetString(1), r.GetString(2), DbRead.GetInt32(r, 3)));
+        {
+            rows.Add((
+                Email: r.GetString(0),
+                Name: r.GetString(1),
+                Role: r.GetString(2),
+                Orders: DbRead.GetInt32(r, 3),
+                Segment: r.IsDBNull(4) ? "" : r.GetString(4)
+            ));
+        }
 
         return View("/Views/AdminPanel/Users/Users.cshtml", rows);
     }
 
-    // POST /admin/users/{email}/role
+
     [ValidateAntiForgeryToken]
     [HttpPost("{email}/role")]
     public async Task<IActionResult> SetRole(string email, string roleName)
@@ -58,7 +68,60 @@ public class AdminUsersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // GET /admin/users/{email}/orders
+    [ValidateAntiForgeryToken]
+    [HttpPost("{email}/delete")]
+    public async Task<IActionResult> Delete(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            TempData["Msg"] = "Chybí e-mail uživatele.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var currentEmail = User.FindFirstValue(ClaimTypes.Email) ?? "";
+
+        if (string.Equals(email, currentEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Msg"] = "Nemůžete smazat sami sebe.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        await using var conn = await _db.CreateOpenAsync();
+        await using var cmd = new OracleCommand("ST72861.PRC_USER_DELETE", (OracleConnection)conn)
+        {
+            CommandType = CommandType.StoredProcedure,
+            BindByName = true
+        };
+
+        cmd.Parameters.Add("p_email", OracleDbType.Varchar2, 200).Value = email.Trim();
+        cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100).Value = User.Identity?.Name ?? "admin";
+
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+            TempData["Msg"] = $"Uživatel {email} byl úspěšně smazán.";
+        }
+        catch (OracleException ex)
+        {
+            switch (ex.Number)
+            {
+                case 20082:
+                    TempData["Msg"] = $"Nelze smazat uživatele {email}: má objednávky.";
+                    break;
+                case 20081:
+                case 20083:
+                    TempData["Msg"] = $"Uživatel {email} nebyl nalezen.";
+                    break;
+                default:
+                    TempData["Msg"] = "Chyba při mazání uživatele: " + ex.Message;
+                    break;
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+
     [HttpGet("{email}/orders")]
     public async Task<IActionResult> UserOrders(string email)
     {
