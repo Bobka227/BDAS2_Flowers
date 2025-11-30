@@ -29,76 +29,62 @@ public class AuthController : Controller
 
         await using var conn = await _db.CreateOpenAsync();
 
-        await using (var c = conn.CreateCommand())
-        {
-            c.CommandText = "SELECT COUNT(*) FROM \"USER\" WHERE email = :email";
-            c.Parameters.Add(new OracleParameter(
-                "email",
-                OracleDbType.Varchar2,
-                vm.Email.ToLower(),
-                ParameterDirection.Input));
+        var hash = _hasher.Hash(vm.Password);
+        int newId;
 
-            var exists = Convert.ToInt32(await c.ExecuteScalarAsync()) > 0;
-            if (exists)
+        await using (var cmd = new OracleCommand("ST72861.PRC_USER_REGISTER", (OracleConnection)conn))
+        {
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.BindByName = true;
+
+            cmd.Parameters.Add("p_email", OracleDbType.Varchar2, vm.Email.ToLower(), ParameterDirection.Input);
+            cmd.Parameters.Add("p_hash", OracleDbType.Varchar2, hash, ParameterDirection.Input);
+            cmd.Parameters.Add("p_first", OracleDbType.Varchar2, vm.FirstName.Trim(), ParameterDirection.Input);
+            cmd.Parameters.Add("p_last", OracleDbType.Varchar2, vm.LastName.Trim(), ParameterDirection.Input);
+            cmd.Parameters.Add("p_phone", OracleDbType.Varchar2, vm.Phone, ParameterDirection.Input);
+
+            var oId = new OracleParameter("o_user_id", OracleDbType.Int32)
             {
-                ModelState.AddModelError(nameof(vm.Email), "Tento e-mail už je registrován.");
+                Direction = ParameterDirection.Output
+            };
+            cmd.Parameters.Add(oId);
+
+            try
+            {
+                await cmd.ExecuteNonQueryAsync();
+
+                var raw = oId.Value;
+
+                if (raw == null || raw is DBNull)
+                    throw new InvalidOperationException("Procedura nevrátila USERID.");
+
+                if (raw is Oracle.ManagedDataAccess.Types.OracleDecimal od)
+                    newId = od.ToInt32();
+                else
+                    newId = Convert.ToInt32(raw);
+            }
+            catch (OracleException ex)
+            {
+                if (ex.Number == 20202)
+                {
+                    ModelState.AddModelError(nameof(vm.Email), "Tento e-mail už je registrován.");
+                    return View(vm);
+                }
+                if (ex.Number == 20201)
+                {
+                    ModelState.AddModelError(nameof(vm.Email), "E-mail je povinný.");
+                    return View(vm);
+                }
+
+                ModelState.AddModelError(string.Empty, "Chyba při registraci: " + ex.Message);
                 return View(vm);
             }
-        }
-
-        int newId;
-        await using (var c = conn.CreateCommand())
-        {
-            c.CommandText = "SELECT NVL(MAX(userid),0)+1 FROM \"USER\"";
-            newId = Convert.ToInt32(await c.ExecuteScalarAsync());
-        }
-
-        var hash = _hasher.Hash(vm.Password);
-
-        await using (var c = conn.CreateCommand())
-        {
-            c.CommandText = @"
-          INSERT INTO ""USER"" (
-              userid,
-              email,
-              passwordhash,
-              createdat,
-              roleid,
-              firstname,
-              lastname,
-              phone
-          )
-          VALUES (
-              :id,
-              :email,
-              :phash,
-              SYSDATE,
-              :role,
-              :fn,
-              :ln,
-              :phone
-          )";
-
-            c.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, newId, ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("email", OracleDbType.Varchar2, vm.Email.ToLower(), ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("phash", OracleDbType.Varchar2, hash, ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("role", OracleDbType.Int32, 1, ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("fn", OracleDbType.Varchar2, vm.FirstName, ParameterDirection.Input));
-            c.Parameters.Add(new OracleParameter("ln", OracleDbType.Varchar2, vm.LastName, ParameterDirection.Input));
-
-          
-            c.Parameters.Add(new OracleParameter(
-                "phone",
-                OracleDbType.Varchar2,
-                vm.Phone,
-                ParameterDirection.Input));
-
-            await c.ExecuteNonQueryAsync();
         }
 
         await SignInAsync(newId, vm.Email.ToLower(), "Customer", vm.FirstName, vm.LastName);
         return RedirectToAction("Index", "Home");
     }
+
 
 
     [HttpGet("/auth/login")]
