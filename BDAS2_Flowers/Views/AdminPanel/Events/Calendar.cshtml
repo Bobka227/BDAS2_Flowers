@@ -98,19 +98,22 @@
                                                                 <div class="d-none calendar-events-content">
                                                     @foreach (var e in eventsForDay)
                                                     {
-                                                                            <div class="mb-3 border-bottom pb-2">
-                                                                                <div class="small text-muted">
-                                                                @e.EventDate.ToString("yyyy-MM-dd") · @e.Shop
-                                                                                </div>
-                                                                                <div class="fw-semibold">@e.EventType</div>
-                                                                                <div>@e.Customer</div>
-                                                                                <span class="badge bg-secondary">@e.Status</span>
-                                                                                <div class="small text-muted mt-1">
-                                                                                    Objednávka @e.OrderNo<br/>
-                                                                                    Celkem: @e.Total
-                                                                                </div>
-                                                                            </div>
-                                                    }
+                                                        <a asp-controller="AdminOrders"
+                                                           asp-action="Details"
+                                                           asp-route-orderNo="@e.OrderNo"
+                                                           class="text-decoration-none text-reset d-block mb-3 border-bottom pb-2 calendar-event-card">
+                                                            <div class="small text-muted">
+                                                                                            @e.EventDate.ToString("yyyy-MM-dd") · @e.Shop
+                                                            </div>
+                                                            <div class="fw-semibold">@e.EventType</div>
+                                                            <div>@e.Customer</div>
+                                                            <span class="badge bg-secondary">@e.Status</span>
+                                                            <div class="small text-muted mt-1">
+                                                                Objednávka @e.OrderNo<br />
+                                                                Celkem: @($"{e.Total:0 Kč}")
+                                                            </div>
+                                                        </a>
+                                                     }
                                                                 </div>
                                             }
                                                     </td>

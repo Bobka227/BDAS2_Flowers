@@ -341,3 +341,7 @@ body::before {
     background-color: var(--brand-contrast) !important;
     border-color: var(--brand-contrast) !important;
 }
+
+.calendar-event-card:hover {
+    background-color: #fdf0ef;
+}
