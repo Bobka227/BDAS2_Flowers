@@ -19,6 +19,7 @@ public class AdminPositionsController : Controller
     {
         var rows = new List<AdminPositionRowVm>();
 
+        // TODO VIEW/PROCEDURE
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
@@ -83,6 +84,7 @@ public class AdminPositionsController : Controller
 
         await using (var cmd = conn.CreateCommand())
         {
+            // TODO VIEW
             cmd.CommandText = @"
           SELECT POSITIONID, POSITIONNAME
             FROM POSITION
@@ -97,6 +99,7 @@ public class AdminPositionsController : Controller
             vm.Name = r.GetString(1);
         }
 
+        // TODO VIEW
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"SELECT COUNT(*) FROM EMPLOYEER WHERE POSITIONID = :id";

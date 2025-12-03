@@ -32,7 +32,7 @@ public class CartController : Controller
 
         foreach (var it in need)
         {
-            await using var cmd = new OracleCommand(
+            await using var cmd = new OracleCommand( // TODO VIEW
                 @"SELECT Name, CAST(Price AS NUMBER(10,2)) 
                     FROM PRODUCT 
                    WHERE ProductId = :id", con);
@@ -78,7 +78,7 @@ public class CartController : Controller
         string title;
         decimal price;
 
-        await using (var cmd = new OracleCommand(
+        await using (var cmd = new OracleCommand( // TODO VIEW
             @"SELECT Name, CAST(Price AS NUMBER(10,2)) 
             FROM PRODUCT 
            WHERE ProductId = :id", con))

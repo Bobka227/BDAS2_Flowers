@@ -89,7 +89,7 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    // TODO VIEW
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -228,6 +228,7 @@ public class AdminEmployeersController : Controller
             }
         }
 
+        // TODO VIEW
         await using (var cmd2 = conn.CreateCommand())
         {
             cmd2.CommandText = @"

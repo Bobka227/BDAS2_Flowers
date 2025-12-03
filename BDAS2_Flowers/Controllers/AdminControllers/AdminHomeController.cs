@@ -74,7 +74,7 @@ public class AdminHomeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    // TODO VIEW
     private async Task<LogsPageVm> LoadLogsAsync(int page, int size)
     {
         page = Math.Max(1, page);

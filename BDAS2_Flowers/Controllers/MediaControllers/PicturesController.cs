@@ -17,7 +17,7 @@ namespace BDAS2_Flowers.Controllers.MediaControllers
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT p.Picture, pf.Extention
                                 FROM PICTURE p JOIN PICTURE_FORMAT pf ON pf.FormatId=p.FormatId
-                                WHERE p.PictureId=:id";
+                                WHERE p.PictureId=:id"; // TODO VIEW
             cmd.Parameters.Add(new OracleParameter("id", id));
             await using var r = await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
             if (!await r.ReadAsync()) return NotFound();

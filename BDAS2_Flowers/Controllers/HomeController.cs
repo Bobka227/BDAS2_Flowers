@@ -24,7 +24,7 @@ public class HomeController : Controller
               FROM VW_CATALOG_PRODUCTS
               ORDER BY DBMS_RANDOM.VALUE
             )
-            WHERE ROWNUM <= 8";
+            WHERE ROWNUM <= 4";
 
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())

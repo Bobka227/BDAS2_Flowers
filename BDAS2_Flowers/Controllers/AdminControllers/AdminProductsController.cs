@@ -103,8 +103,6 @@ public class AdminProductsController : Controller
         return PartialView("_ProductsTable", rows);
     }
 
-
-
     private static async Task<IEnumerable<(int Id, string Name)>> LoadTypesAsync(IDbConnection conn)
     {
         var list = new List<(int, string)>();

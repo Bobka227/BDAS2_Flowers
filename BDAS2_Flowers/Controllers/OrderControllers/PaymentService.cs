@@ -81,7 +81,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
         public async Task<decimal> GetAmountAsync(OracleConnection con, OracleTransaction tx, int paymentId)
         {
             await using var cmd = new OracleCommand(
-                "SELECT AMOUNT FROM PAYMENT WHERE PAYMENTID = :pid", con)
+                "SELECT AMOUNT FROM PAYMENT WHERE PAYMENTID = :pid", con) // TODO VIEW
             {
                 CommandType = CommandType.Text,
                 Transaction = tx

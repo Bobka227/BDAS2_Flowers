@@ -53,6 +53,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             await using var con = await _db.CreateOpenAsync();
             await using var cmd = con.CreateCommand();
             (cmd as OracleCommand)!.BindByName = true;
+            // TODO VIEW
             cmd.CommandText = "SELECT u.USERID FROM \"USER\" u WHERE UPPER(u.EMAIL)=UPPER(:e)";
             (cmd as OracleCommand)!.Parameters.Add("e", OracleDbType.Varchar2, 100).Value = email;
             var res = await cmd.ExecuteScalarAsync();
@@ -86,6 +87,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 read.Transaction = tx;
                 read.BindByName = true;
+                // TODO VIEW
                 read.CommandText = "SELECT MAX(DELIVERYMETHODID) FROM DELIVERY_METHOD WHERE UPPER(DELIVERYNAME)=UPPER(:n)";
                 read.Parameters.Add("n", OracleDbType.Varchar2, 200).Value = name;
                 var v = await read.ExecuteScalarAsync();
@@ -98,6 +100,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
         {
             await using (var cmd = con.CreateCommand())
             {
+                // TODO VIEW
                 cmd.Transaction = tx;
                 cmd.BindByName = true;
                 cmd.CommandText = @"
@@ -115,7 +118,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 cmd2.Transaction = tx;
                 cmd2.BindByName = true;
-                cmd2.CommandText = @"SELECT productid FROM product WHERE UPPER(name) = 'EVENT ORGANIZATION'";
+                cmd2.CommandText = @"SELECT productid FROM product WHERE UPPER(name) = 'EVENT ORGANIZATION'";// TODO VIEW
                 var res2 = await cmd2.ExecuteScalarAsync();
                 if (res2 != null && res2 != DBNull.Value) return AsInt(res2);
             }
@@ -124,7 +127,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 cmd3.Transaction = tx;
                 cmd3.BindByName = true;
-                cmd3.CommandText = @"SELECT MIN(productid) FROM product WHERE UPPER(name) LIKE 'ORGANIZATION%'";
+                cmd3.CommandText = @"SELECT MIN(productid) FROM product WHERE UPPER(name) LIKE 'ORGANIZATION%'";// TODO VIEW
                 var res3 = await cmd3.ExecuteScalarAsync();
                 if (res3 != null && res3 != DBNull.Value) return AsInt(res3);
             }
@@ -132,7 +135,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             await using (var cmd4 = con.CreateCommand())
             {
                 cmd4.Transaction = tx;
-                cmd4.CommandText = @"SELECT MIN(productid) FROM product";
+                cmd4.CommandText = @"SELECT MIN(productid) FROM product";// TODO VIEW
                 var res4 = await cmd4.ExecuteScalarAsync();
                 if (res4 != null && res4 != DBNull.Value) return AsInt(res4);
             }
@@ -490,9 +493,6 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             }
         }
 
-
-
-
         [HttpGet]
         public IActionResult EventOrderSuccess()
         {
@@ -501,6 +501,5 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             return View(); 
         }
-
     }
 }
