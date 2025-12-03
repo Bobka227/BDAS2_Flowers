@@ -1,0 +1,172 @@
+﻿@using BDAS2_Flowers.Models.ViewModels.AdminModels
+@using System.Globalization
+@model AdminCalendarVm
+
+@{
+    var cz = new CultureInfo("cs-CZ");
+    var firstDay = Model.FirstDay;
+    var monthLabel = cz.TextInfo.ToTitleCase(firstDay.ToString("MMMM yyyy", cz));
+
+    var grouped = Model.Events
+        .GroupBy(e => e.EventDate.Date)
+        .ToDictionary(g => g.Key, g => g.ToList());
+
+    var daysInMonth = Model.DaysInMonth;
+    var firstIndex = Model.FirstDayOfWeekIndex;
+    var prevMonth = firstDay.AddMonths(-1);
+    var nextMonth = firstDay.AddMonths(1);
+}
+
+<div class="container py-3">
+    <h2 class="mb-3">Kalendář událostí (@monthLabel)</h2>
+
+    <div class="row mb-3">
+        <div class="col text-start">
+            <a class="btn btn-brand"
+               asp-controller="AdminEvents"
+               asp-action="Calendar"
+               asp-route-year="@prevMonth.Year"
+               asp-route-month="@prevMonth.Month">
+                &laquo; Předchozí měsíc
+            </a>
+        </div>
+        <div class="col text-center">
+            <a class="btn btn-brand"
+               asp-controller="AdminEvents"
+               asp-action="Calendar">
+                Dnešní měsíc
+            </a>
+        </div>
+        <div class="col text-end">
+            <a class="btn btn-brand"
+               asp-controller="AdminEvents"
+               asp-action="Calendar"
+               asp-route-year="@nextMonth.Year"
+               asp-route-month="@nextMonth.Month">
+                Další měsíc &raquo;
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <table class="table table-bordered text-center align-middle calendar-table">
+                <thead class="table-light">
+                <tr>
+                    <th>Po</th>
+                    <th>Út</th>
+                    <th>St</th>
+                    <th>Čt</th>
+                    <th>Pá</th>
+                    <th>So</th>
+                    <th>Ne</th>
+                </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var day = 1;
+                        while (day <= daysInMonth)
+                        {
+                                <tr>
+                                @for (int i = 0; i < 7; i++)
+                                {
+                                    if ((day == 1 && i < firstIndex) || day > daysInMonth)
+                                    {
+                                                    <td></td>
+                                    }
+                                    else
+                                    {
+                                        var currentDate = new DateTime(Model.Year, Model.Month, day);
+                                        grouped.TryGetValue(currentDate.Date, out var eventsForDay);
+                                        var hasEvents = eventsForDay != null && eventsForDay.Count > 0;
+
+                                                    <td class="calendar-day @(hasEvents ? "has-events" : "")"
+                                                        data-date="@currentDate.ToString("yyyy-MM-dd")">
+                                                        <div class="d-flex justify-content-between">
+                                                            <span class="calendar-day-number">@day.</span>
+
+                                                @if (hasEvents)
+                                                {
+                                                                    <span class="badge bg-primary rounded-pill calendar-event-count">
+                                                        @eventsForDay.Count
+                                                                    </span>
+                                                }
+                                                        </div>
+
+                                            @if (hasEvents)
+                                            {
+                                                                <div class="d-none calendar-events-content">
+                                                    @foreach (var e in eventsForDay)
+                                                    {
+                                                        <a asp-controller="AdminOrders"
+                                                           asp-action="Details"
+                                                           asp-route-orderNo="@e.OrderNo"
+                                                           class="text-decoration-none text-reset d-block mb-3 border-bottom pb-2 calendar-event-card">
+                                                            <div class="small text-muted">
+                                                                                            @e.EventDate.ToString("yyyy-MM-dd") · @e.Shop
+                                                            </div>
+                                                            <div class="fw-semibold">@e.EventType</div>
+                                                            <div>@e.Customer</div>
+                                                            <span class="badge bg-secondary">@e.Status</span>
+                                                            <div class="small text-muted mt-1">
+                                                                Objednávka @e.OrderNo<br />
+                                                                Celkem: @($"{e.Total:0 Kč}")
+                                                            </div>
+                                                        </a>
+                                                     }
+                                                                </div>
+                                            }
+                                                    </td>
+
+                                        day++;
+                                    }
+                                }
+                                </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <a class="btn btn-brand-second mt-2"
+               asp-controller="AdminEvents"
+               asp-action="Index">
+                Zpět na seznam událostí
+            </a>
+        </div>
+
+        <div class="col-lg-4 mt-4 mt-lg-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    Detaily událostí
+                </div>
+                <div class="card-body" id="eventDetailBody">
+                    <p class="text-muted mb-0">
+                        Klikni na den, který má události (označený číslem v odznaku).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const dayCells = document.querySelectorAll('.calendar-day');
+        const detailBody = document.getElementById('eventDetailBody');
+
+        dayCells.forEach(function (cell) {
+            cell.addEventListener('click', function () {
+                dayCells.forEach(c => c.classList.remove('selected-day'));
+                this.classList.add('selected-day');
+
+                const content = this.querySelector('.calendar-events-content');
+                if (content) {
+                    detailBody.innerHTML = content.innerHTML;
+                } else {
+                    detailBody.innerHTML =
+                        '<p class="text-muted mb-0">Pro tento den nejsou žádné události.</p>';
+                }
+            });
+        });
+    })();
+</script>
