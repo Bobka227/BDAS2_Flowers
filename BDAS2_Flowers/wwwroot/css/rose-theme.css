@@ -306,3 +306,38 @@ body::before {
 .status-actions .btn {
     min-width: 110px;
 }
+
+.calendar-table {
+    table-layout: fixed;
+}
+
+    .calendar-table td {
+        height: 90px;
+        vertical-align: top;
+        cursor: pointer;
+        background-color: #ffffff;
+    }
+
+.calendar-day-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.calendar-day.has-events {
+    background-color: var(--brand);
+}
+
+.calendar-event-count {
+    font-size: 0.7rem;
+}
+
+.calendar-day.selected-day {
+    outline: 2px solid var(--brand-contrast);
+    outline-offset: -2px;
+    background-color: var(--shadow);
+}
+
+.calendar-day .badge.bg-primary {
+    background-color: var(--brand-contrast) !important;
+    border-color: var(--brand-contrast) !important;
+}
