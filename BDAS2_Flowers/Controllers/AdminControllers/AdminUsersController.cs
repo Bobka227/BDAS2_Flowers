@@ -131,6 +131,7 @@ public class AdminUsersController : Controller
 
         await using (var cmd = conn.CreateCommand())
         {
+            // TODO VIEW
             cmd.CommandText = @"
                 SELECT u.firstname||' '||u.lastname AS name
                 FROM ""USER"" u WHERE UPPER(u.email)=UPPER(:e)";
@@ -189,6 +190,8 @@ public class AdminUsersController : Controller
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.BindByName = true;
+
+        // TODO VIEW
         cmd.CommandText = @"
         SELECT u.USERID,
                u.EMAIL,

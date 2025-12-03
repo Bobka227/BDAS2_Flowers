@@ -85,6 +85,8 @@ public class AdminPaymentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+
+    // TODO VIEW
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {

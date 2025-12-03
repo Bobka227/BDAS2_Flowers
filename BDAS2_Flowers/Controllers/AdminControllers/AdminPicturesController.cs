@@ -67,6 +67,7 @@ public class AdminPicturesController : Controller
             }
         }
 
+        // TODO VIEW
         await using (var cmd2 = con.CreateCommand())
         {
             cmd2.CommandText = @"SELECT PRODUCTID, NAME

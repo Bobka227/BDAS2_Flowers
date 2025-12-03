@@ -25,6 +25,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             await using (var conn = await _db.CreateOpenAsync())
             await using (var cmd = conn.CreateCommand())
             {
+                // TODO VIEW
                 cmd.CommandText = @"
                     SELECT eventtypeid, eventname, description
                     FROM event_type
