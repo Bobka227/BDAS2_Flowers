@@ -6,7 +6,9 @@
     var hasNext = (bool)(ViewBag.HasNext ?? false);
     var categories = (List<(int Id, string Name)>)ViewBag.Categories ?? new();
     int? selectedTypeId = (int?)ViewBag.SelectedTypeId;
+    string? search = ViewBag.Search as string; 
 }
+
 
 <section class="hero mb-5">
     <div class="flex-fill">
@@ -34,18 +36,32 @@
 </div>
 
 <form method="get" class="filterbar">
-    <div class="input-group" style="max-width: 320px;">
+    <div class="input-group me-3" style="max-width: 320px;">
         <label class="input-group-text" for="typeId">Kategorie</label>
         <select id="typeId" name="typeId" class="form-select">
             <option value="">Všechny</option>
             @foreach (var c in categories)
             {
-                <option value="@c.Id" selected="@(selectedTypeId==c.Id ? "selected" : null)">
+                <option value="@c.Id" selected="@(selectedTypeId == c.Id ? "selected" : null)">
                     @c.Name
                 </option>
             }
         </select>
     </div>
+
+    <div class="input-group" style="max-width: 360px;">
+        <span class="input-group-text" id="q-label">
+            <i class="bi bi-search"></i>
+        </span>
+        <input type="text"
+               class="form-control"
+               id="q"
+               name="q"
+               placeholder="Hledat podle názvu…"
+               value="@(search ?? "")"
+               aria-labelledby="q-label" />
+    </div>
+
     <button type="submit" class="btn btn-brand ms-auto">Filtrovat</button>
 </form>
 
@@ -53,21 +69,54 @@
 <div class="row g-4">
     @foreach (var x in Model)
     {
-        <div class="col-12 col-sm-6 col-lg-3">
+        <div class="col-12 col-sm-6 col-lg-3"
+             data-product-title="@x.Title">
             @await Html.PartialAsync("_ProductCard", x)
         </div>
     }
 </div>
 
+
 <nav class="d-flex justify-content-center my-4">
     <ul class="pagination">
         <li class="page-item @(p <= 1 ? "disabled" : "")">
-            <a class="page-link" href="@Url.Action("Index", new { page = p - 1, typeId = selectedTypeId })">&laquo;</a>
+            <a class="page-link"
+               href="@Url.Action("Index", new { page = p - 1, typeId = selectedTypeId, q = search })">
+                &laquo;
+            </a>
         </li>
         <li class="page-item active"><span class="page-link">@p</span></li>
         <li class="page-item @(hasNext ? "" : "disabled")">
-            <a class="page-link" href="@Url.Action("Index", new { page = p + 1, typeId = selectedTypeId })">&raquo;</a>
+            <a class="page-link"
+               href="@Url.Action("Index", new { page = p + 1, typeId = selectedTypeId, q = search })">
+                &raquo;
+            </a>
         </li>
     </ul>
 </nav>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('q');
+            if (!input) return;
+
+            const items = document.querySelectorAll('[data-product-title]');
+
+            input.addEventListener('input', function () {
+                const query = this.value.trim().toLowerCase();
+
+                items.forEach(function (el) {
+                    const title = (el.getAttribute('data-product-title') || '').toLowerCase();
+
+                    const match = !query || title.includes(query);
+
+                    el.style.display = match ? '' : 'none';
+                });
+            });
+        });
+    </script>
+}
+
 
