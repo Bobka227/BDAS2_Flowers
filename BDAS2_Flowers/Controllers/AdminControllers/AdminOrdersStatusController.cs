@@ -32,8 +32,18 @@ public class AdminOrdersStatusController : Controller
         }
         catch (OracleException ex)
         {
-            TempData["Msg"] = "Nelze změnit status: " + ex.Message;
+            string msg = ex.Number switch
+            {
+                20020 =>
+                    "Nelze změnit status: tento přechod mezi stavy není povolen.",
+
+                _ =>
+                    "Nelze změnit status objednávky – došlo k chybě."
+            };
+
+            TempData["Msg"] = msg;
         }
+
         return Redirect($"/admin/users/{returnEmail}/orders");
     }
 }

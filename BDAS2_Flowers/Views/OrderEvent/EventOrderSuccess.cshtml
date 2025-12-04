@@ -1,26 +1,111 @@
-﻿@{
-    var orderNo = Convert.ToString(ViewData["OrderNo"]) ?? "—";
-    var eventId = ViewData["EventTypeId"] as int?;
+﻿@using System.Security.Claims
+@{
+    ViewData["Title"] = "Objednávka odeslána";
+
+    var orderNoObj = ViewData["OrderNo"];
+    var orderNo = orderNoObj?.ToString() ?? "(neznámé číslo)";
+
+    int? eventTypeId = null;
+    if (ViewData["EventTypeId"] is int et)
+    {
+        eventTypeId = et;
+    }
+    else if (ViewData["EventTypeId"] is string etStr && int.TryParse(etStr, out var etParsed))
+    {
+        eventTypeId = etParsed;
+    }
+
+    int? orderId = null;
+    if (ViewData["OrderId"] is int oi)
+    {
+        orderId = oi;
+    }
+    else if (ViewData["OrderId"] is string oiStr && int.TryParse(oiStr, out var oiParsed))
+    {
+        orderId = oiParsed;
+    }
+
+    var email = User.FindFirst(ClaimTypes.Email)?.Value;
 }
 
-<section class="container my-5">
-    <h1 class="mb-3">Objednávka odeslána</h1>
-    <p class="lead">Číslo objednávky: <strong>@orderNo</strong></p>
-
-    <div class="mt-4">
-        @if (eventId is int etid && etid > 0)
-        {
-            <a class="btn btn-brand w-100 text-white"
-               asp-controller="Events" asp-action="Type" asp-route-id="@etid">
-                Zpět na události
-            </a>
-        }
-        else
-        {
-            <a class="btn btn-brand w-100 text-white"
-               asp-controller="Home" asp-action="Index">
-                Zpět na hlavní stránku
-            </a>
-        }
+<section class="hero mb-5">
+    <div class="flex-fill">
+        <h1 class="display-4 fw-bold">Objednávka odeslána</h1>
+        <p class="text-muted fs-5">
+            Děkujeme za Vaši objednávku události.
+        </p>
     </div>
 </section>
+
+<div class="row justify-content-center mb-5">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-4 p-md-5">
+
+                <h2 class="h4 mb-3">Shrnutí objednávky</h2>
+
+                <dl class="row mb-4">
+                    <dt class="col-sm-4">Číslo objednávky</dt>
+                    <dd class="col-sm-8 fw-semibold">
+                        <span class="badge bg-dark text-light fs-6 py-2 px-3">
+                            @orderNo
+                        </span>
+                    </dd>
+
+
+                    @if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        <dt class="col-sm-4">Potvrzení</dt>
+                        <dd class="col-sm-8">
+                            Bude zasláno na e-mail <strong>@email</strong>.
+                        </dd>
+                    }
+                </dl>
+
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Naši organizátoři se Vám ozvou s podrobnostmi ohledně události.
+                    V přehledu objednávek bude tato objednávka vedena jako speciální
+                    objednávka pro událost.
+                </div>
+
+                <div class="d-flex flex-column flex-md-row gap-2">
+
+                    @if (eventTypeId.HasValue)
+                    {
+                        <a asp-controller="Events"
+                           asp-action="Type"
+                           asp-route-id="@eventTypeId.Value"
+                           class="btn btn-brand flex-fill">
+                            Zpět na události
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Home"
+                           asp-action="Index"
+                           class="btn btn-brand flex-fill">
+                            Zpět na události
+                        </a>
+                    }
+
+                    @if (orderId.HasValue)
+                    {
+                        <a asp-controller="Orders"
+                           asp-action="Details"
+                           asp-route-id="@orderId.Value"
+                           class="btn btn-outline-secondary flex-fill">
+                            Zobrazit detail objednávky
+                        </a>
+                    }
+
+                    <a asp-controller="Home" asp-action="Index"
+                       class="btn btn-link flex-fill text-decoration-none">
+                        Přesunout se na hlavní stránku
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
