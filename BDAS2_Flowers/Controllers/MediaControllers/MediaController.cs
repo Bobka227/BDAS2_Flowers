@@ -43,9 +43,9 @@ namespace BDAS2_Flowers.Controllers.MediaControllers
             };
             return File(bytes, contentType);
         }
-
+        
         [HttpGet("/media/product/by-product/{productId:int}")]
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any, NoStore = false)]
         public async Task<IActionResult> ProductMainImage(int productId)
         {
             await using var con = new OracleConnection(_cfg.GetConnectionString("Oracle"));

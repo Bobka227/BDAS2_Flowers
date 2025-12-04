@@ -4,15 +4,18 @@
     var hideAdd = ViewBag.HideAdd as bool? ?? false;
 }
 <div class="product-card">
-  <img src="@($"{Model.ImageUrl}?v={Model.ImageVersion}")" alt="@Model.Title"/>
-  <div class="content">
-    <div class="title">@Model.Title</div>
+    <img src="@($"{Model.ImageUrl}?v={Model.ImageVersion}")"
+         alt="@Model.Title"
+         loading="lazy"
+         decoding="async" />
+    <div class="content">
+        <div class="title">@Model.Title</div>
         @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
         {
-          <div class="subtitle">(@Model.Subtitle)</div>
+            <div class="subtitle">(@Model.Subtitle)</div>
         }
-    <div class="mt-1 text-muted">@Model.PriceFrom.ToString("0 Kč")</div>
-  </div>
+        <div class="mt-1 text-muted">@Model.PriceFrom.ToString("0 Kč")</div>
+    </div>
 
     @if (!hideAdd)
     {
@@ -21,17 +24,17 @@
             {
                 <form method="post" asp-controller="Cart" asp-action="Add" class="w-100">
                     @Html.AntiForgeryToken()
-                  <input type="hidden" name="productId" value="@Model.ProductId" />
-                  <input type="hidden" name="quantity" value="1" />
-                  <button type="submit" class="btn btn-brand w-100 add-to-cart" data-product-id="@Model.ProductId">
-                    <i class="bi bi-bag"></i> Přidat do košíku
-                  </button>
+                    <input type="hidden" name="productId" value="@Model.ProductId" />
+                    <input type="hidden" name="quantity" value="1" />
+                    <button type="submit" class="btn btn-brand w-100 add-to-cart" data-product-id="@Model.ProductId">
+                        <i class="bi bi-bag"></i> Přidat do košíku
+                    </button>
                 </form>
             }
             else
             {
                 <button type="button" class="btn btn-brand w-100 requires-auth" data-intent="cart">
-                  <i class="bi bi-bag"></i> Přidat do košíku
+                    <i class="bi bi-bag"></i> Přidat do košíku
                 </button>
             }
         </div>
