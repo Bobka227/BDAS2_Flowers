@@ -25,9 +25,9 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
             {
                 c1.CommandText = @"
                     SELECT Id, Name
-                      FROM VW_PRODUCT_TYPES
-                     WHERE Name <> 'Návrh na akci'
-                     ORDER BY Name";
+                    FROM VW_PRODUCT_TYPES
+                    WHERE Name <> 'Návrh na akci'
+                    ORDER BY Name";
 
                 await using var r1 = await c1.ExecuteReaderAsync();
                 while (await r1.ReadAsync())

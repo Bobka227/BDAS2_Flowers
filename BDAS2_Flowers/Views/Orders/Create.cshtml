@@ -102,22 +102,33 @@
                 <tbody id="items">
                     @for (var i = 0; i < Model.Items.Count; i++)
                     {
-                        <tr>
-                            <td>
-                                <select class="form-select" name="Items[@i].ProductId">
-                                    @foreach (var p in Model.Products)
-                                    {
-                                        <option value="@p.Id" selected="@(Model.Items[i].ProductId == p.Id)">@p.Name</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <input class="form-control" type="number" min="1" name="Items[@i].Quantity" value="@(Model.Items[i].Quantity > 0 ? Model.Items[i].Quantity : 1)"/>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">Smazat</button>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td>
+                                    <select class="form-select" name="Items[@i].ProductId">
+                                                            @foreach (var p in Model.Products)
+                                                            {
+                                                <option value="@p.Id" selected="@(Model.Items[i].ProductId == p.Id)">
+                                                                    @p.Name
+                                                </option>
+                                                            }
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="hidden"
+                                           name="Items[@i].UnitPrice"
+                                           value="@Model.Items[i].UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                    <input class="form-control"
+                                           type="number" min="1"
+                                           name="Items[@i].Quantity"
+                                           value="@(Model.Items[i].Quantity > 0 ? Model.Items[i].Quantity : 1)" />
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="this.closest('tr').remove(); recalcTotal();">
+                                        Smazat
+                                    </button>
+                                </td>
+                            </tr>
                     }
                 </tbody>
             </table>
@@ -128,7 +139,9 @@
     <div class="col-12">
         <div class="alert alert-secondary mt-3">
             Aktuální cena objednávky:
-            <strong>@Model.CartTotal.ToString("0 Kč")</strong>
+            <strong id="orderTotal">
+                    @Model.CartTotal.ToString("0 Kč")
+            </strong>
         </div>
     </div>
 
@@ -175,36 +188,40 @@
                     products.map(p => `<option value="${p.Id}">${p.Name}</option>`).join('') +
                     `</select>`;
                 const row = document.createElement('tr');
-                row.innerHTML = `
+                    row.innerHTML = `
                     <td>${sel}</td>
-                    <td><input class="form-control" type="number" min="1" name="Items[${index}].Quantity" value="1" /></td>
+                    <td>
+                        <input type="hidden" name="Items[${index}].UnitPrice" value="0" />
+                        <input class="form-control" type="number" min="1" name="Items[${index}].Quantity" value="1" />
+                    </td>
                     <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); recalcTotal();">Smazat</button></td>`;
                 tbody.appendChild(row);
                 recalcTotal();
             }
 
-            function recalcTotal() {
-                const priceMap = {};
-                products.forEach(p => priceMap[p.Id] = p.Price ?? 0);
-                let sum = 0;
+                function recalcTotal() {
+                    let sum = 0;
 
-                document.querySelectorAll('#items tr').forEach(tr => {
-                    const sel = tr.querySelector('select[name$=".ProductId"]');
-                    const qtyInput = tr.querySelector('input[name$=".Quantity"]');
-                    if (!sel || !qtyInput) return;
-                    const id = parseInt(sel.value);
-                    const qty = parseInt(qtyInput.value) || 0;
-                    if (!id || qty <= 0) return;
-                    const price = priceMap[id] || 0;
-                    sum += price * qty;
-                });
+                    document.querySelectorAll('#items tr').forEach(tr => {
+                        const qtyInput = tr.querySelector('input[name$=".Quantity"]');
+                        const priceInput = tr.querySelector('input[name$=".UnitPrice"]');
+                        if (!qtyInput || !priceInput) return;
 
-                const span = document.getElementById('orderTotal');
-                if (span) {
-                    span.textContent =
-                        sum.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 });
+                        const qty = parseInt(qtyInput.value) || 0;
+                        const price = parseFloat(priceInput.value.replace(',', '.')) || 0;
+
+                        if (qty > 0) sum += qty * price;
+                    });
+
+                    const span = document.getElementById('orderTotal');
+                    if (span) {
+                        span.textContent = sum.toLocaleString('cs-CZ', {
+                            style: 'currency',
+                            currency: 'CZK',
+                            maximumFractionDigits: 0
+                        });
+                    }
                 }
-            }
 
             document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('chkNewAddress')?.addEventListener('change', toggleAddress);
