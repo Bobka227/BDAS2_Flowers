@@ -287,9 +287,28 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             catch (OracleException ex)
             {
                 await tx.RollbackAsync();
-                TempData["OrderError"] = "Chyba při vytváření objednávky: " + ex.Message;
+
+                string userMsg;
+
+                switch (ex.Number)
+                {
+                    case 20502:
+                        userMsg = "Tento uživatel již daný kupón použil. Každý kupón lze použít jen jednou na uživatele.";
+                        break;
+
+                    case 20501:
+                        userMsg = "Platnost tohoto kupónu již vypršela.";
+                        break;
+
+                    default:
+                        userMsg = "Chyba při vytváření objednávky. Zkuste to prosím znovu.";
+                        break;
+                }
+
+                TempData["OrderError"] = userMsg;
                 return Redirect("/orders/create");
             }
+
         }
 
         [HttpGet("/orders/{id:int}")]

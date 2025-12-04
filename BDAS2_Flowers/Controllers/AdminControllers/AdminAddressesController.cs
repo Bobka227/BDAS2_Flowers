@@ -92,7 +92,17 @@ public class AdminAddressesController : Controller
         cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 100).Value = User.Identity?.Name ?? "admin";
 
         try { await cmd.ExecuteNonQueryAsync(); TempData["Msg"] = "Adresa upravena."; }
-        catch (OracleException ex) { TempData["Msg"] = "Nelze upravit adresu: " + ex.Message; }
+        catch (OracleException ex)
+        {
+            string msg = ex.Number switch
+            {
+                1 => "Upravená adresa koliduje s jinou existující adresou.",
+                1438 => "PSČ nebo číslo domu má neplatný formát (příliš velké číslo).",
+                _ => "Nelze upravit adresu. Zkontrolujte údaje a zkuste to znovu."
+            };
+
+            TempData["Msg"] = msg;
+        }
 
         return RedirectToAction(nameof(Index), new { qStreet = Request.Query["qStreet"], qPostal = Request.Query["qPostal"] });
     }

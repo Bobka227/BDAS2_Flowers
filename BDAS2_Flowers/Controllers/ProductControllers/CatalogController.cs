@@ -13,7 +13,7 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
         private readonly IDbFactory _db;
         public CatalogController(IDbFactory db) => _db = db;
 
-        public async Task<IActionResult> Index(int page = 1, int? typeId = null)
+        public async Task<IActionResult> Index(int page = 1, int? typeId = null, string? q = null)
         {
             const int pageSize = 8;
             var items = new List<ProductCardVm>();
@@ -35,8 +35,11 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
             }
             ViewBag.Categories = categories;
             ViewBag.SelectedTypeId = typeId;
+            ViewBag.Search = q; 
 
             await using var cmd = conn.CreateCommand();
+            cmd.BindByName = true;
+
             cmd.CommandText = @"
                   SELECT ProductId, Title, Subtitle, PriceFrom, MainPicId, TypeId
                   FROM VW_CATALOG_PRODUCTS
@@ -44,18 +47,30 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
                   ORDER BY Title
                   OFFSET :skip ROWS FETCH NEXT :take ROWS ONLY";
 
+            var where = "";
+
             if (typeId.HasValue)
             {
-                cmd.CommandText = cmd.CommandText.Replace("/**where**/", "WHERE TypeId = :typeId");
-                cmd.Parameters.Add(new OracleParameter("typeId", OracleDbType.Int32, typeId.Value, ParameterDirection.Input));
-            }
-            else
-            {
-                cmd.CommandText = cmd.CommandText.Replace("/**where**/", "");
+                where += (where.Length == 0 ? "WHERE " : " AND ") + "TypeId = :typeId";
+                cmd.Parameters.Add(
+                    new OracleParameter("typeId", OracleDbType.Int32, typeId.Value, ParameterDirection.Input));
             }
 
-            cmd.Parameters.Add(new OracleParameter("skip", OracleDbType.Int32, (page - 1) * pageSize, ParameterDirection.Input));
-            cmd.Parameters.Add(new OracleParameter("take", OracleDbType.Int32, pageSize, ParameterDirection.Input));
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                where += (where.Length == 0 ? "WHERE " : " AND ")
+                      + " (UPPER(Title) LIKE UPPER(:q) OR UPPER(Subtitle) LIKE UPPER(:q))";
+
+                cmd.Parameters.Add(
+                    new OracleParameter("q", OracleDbType.Varchar2, $"%{q.Trim()}%", ParameterDirection.Input));
+            }
+
+            cmd.CommandText = cmd.CommandText.Replace("/**where**/", where);
+
+            cmd.Parameters.Add(new OracleParameter("skip", OracleDbType.Int32,
+                (page - 1) * pageSize, ParameterDirection.Input));
+            cmd.Parameters.Add(new OracleParameter("take", OracleDbType.Int32,
+                pageSize, ParameterDirection.Input));
 
             await using var r = await cmd.ExecuteReaderAsync();
             while (await r.ReadAsync())

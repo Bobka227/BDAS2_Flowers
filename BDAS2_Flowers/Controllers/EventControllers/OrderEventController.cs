@@ -412,8 +412,10 @@ namespace BDAS2_Flowers.Controllers.EventControllers
         {
             ViewData["OrderNo"] = TempData["OrderNo"];
             ViewData["EventTypeId"] = TempData["EventTypeId"];
+            ViewData["OrderId"] = TempData["OrderId"];  
 
-            return View(); 
+            return View();
         }
+
     }
 }
