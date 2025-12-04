@@ -16,8 +16,6 @@ public class EventsMenuViewComponent : ViewComponent
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
 
-        // TODO TO VIEW
-        // Hotovo
         cmd.CommandText = onlyUsed
           ? @"SELECT eventtypeid, eventname FROM VW_EVENT_TYPES_USED ORDER BY eventname"
           : @"SELECT eventtypeid, eventname FROM event_type ORDER BY eventname";

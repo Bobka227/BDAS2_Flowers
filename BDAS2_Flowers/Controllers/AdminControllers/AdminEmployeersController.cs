@@ -89,7 +89,6 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // TODO VIEW
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -99,30 +98,37 @@ public class AdminEmployeersController : Controller
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"
-              SELECT EMPLOYEERID, FIRSTNAME, LASTNAME,
-                     EMPLOYMENTDATE, SALARY,
-                     SHOPID, MANAGERID, POSITIONID
-                FROM EMPLOYEER
-               WHERE EMPLOYEERID = :id";
+          SELECT ID,
+                 FIRSTNAME,
+                 LASTNAME,
+                 EMPLOYMENTDATE,
+                 SALARY,
+                 SHOPID,
+                 MANAGERID,
+                 POSITIONID
+            FROM VW_ADMIN_EMPLOYEERS
+           WHERE ID = :id";
+
             cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, id, ParameterDirection.Input));
 
             await using var r = await cmd.ExecuteReaderAsync();
             if (!await r.ReadAsync())
                 return NotFound();
 
-            vm.Id = DbRead.GetInt32(r, 0);
-            vm.FirstName = r.GetString(1);
-            vm.LastName = r.GetString(2);
-            vm.EmploymentDate = r.GetDateTime(3);
-            vm.Salary = (decimal)r.GetDecimal(4);
-            vm.ShopId = DbRead.GetInt32(r, 5);
+            vm.Id = DbRead.GetInt32(r, 0);      
+            vm.FirstName = r.GetString(1);           
+            vm.LastName = r.GetString(2);            
+            vm.EmploymentDate = r.GetDateTime(3);          
+            vm.Salary = (decimal)r.GetDecimal(4);  
+            vm.ShopId = DbRead.GetInt32(r, 5);     
             vm.ManagerId = r.IsDBNull(6) ? (int?)null : DbRead.GetInt32(r, 6);
-            vm.PositionId = r.IsDBNull(7) ? (int?)null : DbRead.GetInt32(r, 7);
+            vm.PositionId = r.IsDBNull(7) ? (int?)null : DbRead.GetInt32(r, 7); 
         }
 
         await FillLookupsAsync(vm);
         return View("/Views/AdminPanel/Employeers/Edit.cshtml", vm);
     }
+
 
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]
@@ -228,13 +234,13 @@ public class AdminEmployeersController : Controller
             }
         }
 
-        // TODO VIEW
         await using (var cmd2 = conn.CreateCommand())
         {
             cmd2.CommandText = @"
-          SELECT EMPLOYEERID, FIRSTNAME || ' ' || LASTNAME
-            FROM EMPLOYEER
-           ORDER BY LASTNAME, FIRSTNAME";
+               SELECT ID,
+               FIRSTNAME || ' ' || LASTNAME AS FULLNAME
+               FROM VW_EMPLOYEER_TREE
+               ORDER BY LASTNAME, FIRSTNAME";
 
             await using var r2 = await cmd2.ExecuteReaderAsync();
             while (await r2.ReadAsync())
@@ -242,6 +248,7 @@ public class AdminEmployeersController : Controller
                 employees.Add((DbRead.GetInt32(r2, 0), r2.GetString(1)));
             }
         }
+
 
         ViewBag.Employees = employees;
 

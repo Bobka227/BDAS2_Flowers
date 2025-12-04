@@ -25,25 +25,23 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             await using (var conn = await _db.CreateOpenAsync())
             await using (var cmd = conn.CreateCommand())
             {
-                // TODO VIEW
                 cmd.CommandText = @"
-                    SELECT eventtypeid, eventname, description
-                    FROM event_type
-                    WHERE eventtypeid = :id";
+                    SELECT ID,
+                           NAME,
+                           DESCRIPTION
+                      FROM VW_EVENT_TYPES
+                     WHERE ID = :id";
+
                 cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, id, ParameterDirection.Input));
 
                 await using var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow | CommandBehavior.CloseConnection);
                 if (await r.ReadAsync())
                 {
-                    var iId = r.GetOrdinal("eventtypeid");
-                    var iName = r.GetOrdinal("eventname");
-                    var iDesc = r.GetOrdinal("description");
-
                     vm = new EventTypeVm
                     {
-                        EventTypeId = r.GetInt32(iId),
-                        Name = r.GetString(iName),
-                        Description = r.IsDBNull(iDesc) ? "" : r.GetString(iDesc)
+                        EventTypeId = r.GetInt32(0),                         
+                        Name = r.GetString(1),                       
+                        Description = r.IsDBNull(2) ? "" : r.GetString(2)    
                     };
                 }
             }
@@ -55,7 +53,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             if (Directory.Exists(dir))
             {
                 var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                    { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
 
                 urls = Directory.EnumerateFiles(dir)
                                 .Where(p => allowed.Contains(Path.GetExtension(p)))
@@ -68,5 +66,6 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             return View("Type", vm);
         }
+
     }
 }

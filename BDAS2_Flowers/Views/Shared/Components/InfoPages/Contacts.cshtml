@@ -4,11 +4,12 @@
     ViewData["Title"] = "Kontakt";
 
     var addresses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Central Flowers"] = "Václavské náměstí 12, Praha 1",
-                ["West End Flowers"] = "Masarykova 5, Brno-střed",
-                ["East Market Flowers"] = "Hlavní 33, Ostrava"
-            };
+    {
+        ["FLOW WOW Praha"] = "Václavské náměstí 12, Praha 1",
+        ["FLOW WOW Pardubice"] = "Masarykova 5, Polabiny",
+        ["FLOW WOW Brno"] = "Hlavní 33, Brno-střed",
+        ["FLOW WOW Kolín"] = "Hlavní 33, Kolín"
+    };
 
     string Addr(string name)
         => addresses.TryGetValue(name, out var a) ? a : "- není v datech -";

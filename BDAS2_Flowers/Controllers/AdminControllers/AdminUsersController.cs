@@ -131,15 +131,20 @@ public class AdminUsersController : Controller
 
         await using (var cmd = conn.CreateCommand())
         {
-            // TODO VIEW
             cmd.CommandText = @"
-                SELECT u.firstname||' '||u.lastname AS name
-                FROM ""USER"" u WHERE UPPER(u.email)=UPPER(:e)";
+                SELECT FULLNAME
+                FROM VW_USERS_ADMIN
+                WHERE UPPER(EMAIL) = UPPER(:e)";
+
             cmd.Parameters.Add(new OracleParameter("e", OracleDbType.Varchar2, email, ParameterDirection.Input));
+
             var nameObj = await cmd.ExecuteScalarAsync();
-            if (nameObj is null) return NotFound();
+            if (nameObj is null)
+                return NotFound();
+
             vm.FullName = Convert.ToString(nameObj)!;
         }
+
 
         await using (var cmd = conn.CreateCommand())
         {
@@ -191,16 +196,13 @@ public class AdminUsersController : Controller
         await using var cmd = conn.CreateCommand();
         cmd.BindByName = true;
 
-        // TODO VIEW
         cmd.CommandText = @"
-        SELECT u.USERID,
-               u.EMAIL,
-               u.FIRSTNAME,
-               u.LASTNAME,
-               r.ROLENAME
-          FROM ""USER"" u
-          JOIN ROLE r ON r.ROLEID = u.ROLEID
-         WHERE UPPER(u.EMAIL) = UPPER(:email)";
+        SELECT USERID,
+               EMAIL,
+               FULLNAME,
+               ROLE_NAME
+          FROM VW_USERS_SECURITY
+         WHERE UPPER(EMAIL) = UPPER(:email)";
         cmd.Parameters.Add("email", OracleDbType.Varchar2).Value = email.Trim();
 
         await using var reader = await cmd.ExecuteReaderAsync();
@@ -212,11 +214,8 @@ public class AdminUsersController : Controller
 
         var userId = reader.GetInt32(0);
         var userMail = reader.GetString(1);
-        var first = reader.IsDBNull(2) ? "" : reader.GetString(2);
-        var last = reader.IsDBNull(3) ? "" : reader.GetString(3);
-        var roleName = reader.GetString(4);
-
-        var fullName = (first + " " + last).Trim();
+        var fullName = reader.IsDBNull(2) ? "" : reader.GetString(2);
+        var roleName = reader.GetString(3);
 
         var claims = new List<Claim>
     {
@@ -235,6 +234,7 @@ public class AdminUsersController : Controller
 
         return RedirectToAction("Index", "Home");
     }
+
 
 
 }
