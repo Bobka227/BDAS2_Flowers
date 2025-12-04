@@ -13,7 +13,6 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
         private readonly IDbFactory _db;
         public CatalogController(IDbFactory db) => _db = db;
 
-
         public async Task<IActionResult> Index(int page = 1, int? typeId = null)
         {
             const int pageSize = 8;
@@ -24,7 +23,12 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
             var categories = new List<(int Id, string Name)>();
             await using (var c1 = conn.CreateCommand())
             {
-                c1.CommandText = "SELECT Id, Name FROM VW_PRODUCT_TYPES ORDER BY Name";
+                c1.CommandText = @"
+                    SELECT Id, Name
+                      FROM VW_PRODUCT_TYPES
+                     WHERE Name <> 'Návrh na akci'
+                     ORDER BY Name";
+
                 await using var r1 = await c1.ExecuteReaderAsync();
                 while (await r1.ReadAsync())
                     categories.Add((DbRead.GetInt32(r1, 0), r1.GetString(1)));
@@ -34,11 +38,11 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
 
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-              SELECT ProductId, Title, Subtitle, PriceFrom, MainPicId, TypeId
-              FROM VW_CATALOG_PRODUCTS
-              /**where**/
-              ORDER BY Title
-              OFFSET :skip ROWS FETCH NEXT :take ROWS ONLY";
+                  SELECT ProductId, Title, Subtitle, PriceFrom, MainPicId, TypeId
+                  FROM VW_CATALOG_PRODUCTS
+                  /**where**/
+                  ORDER BY Title
+                  OFFSET :skip ROWS FETCH NEXT :take ROWS ONLY";
 
             if (typeId.HasValue)
             {
