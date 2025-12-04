@@ -81,17 +81,21 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
         public async Task<decimal> GetAmountAsync(OracleConnection con, OracleTransaction tx, int paymentId)
         {
             await using var cmd = new OracleCommand(
-                "SELECT AMOUNT FROM PAYMENT WHERE PAYMENTID = :pid", con) // TODO VIEW
+                @"SELECT AMOUNT 
+                FROM VW_ADMIN_PAYMENTS 
+                WHERE ID = :pid", con) 
             {
                 CommandType = CommandType.Text,
                 Transaction = tx
             };
+
             cmd.BindByName = true;
             cmd.Parameters.Add("pid", OracleDbType.Int32).Value = paymentId;
 
             var v = await cmd.ExecuteScalarAsync();
             return v == null || v == DBNull.Value ? 0m : Convert.ToDecimal(v);
         }
+
 
         private static int GetLast4Digits(string input)
         {

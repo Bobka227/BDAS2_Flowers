@@ -67,16 +67,21 @@ public class AdminPicturesController : Controller
             }
         }
 
-        // TODO VIEW
+     
         await using (var cmd2 = con.CreateCommand())
         {
-            cmd2.CommandText = @"SELECT PRODUCTID, NAME
-                                   FROM PRODUCT
-                                  WHERE NAME NOT LIKE '~~ARCHIVED~~ %'
-                               ORDER BY NAME";
+            cmd2.CommandText = @"
+            SELECT PRODUCTID, TITLE
+              FROM VW_CATALOG_PRODUCTS
+             ORDER BY TITLE";
+
             await using var r2 = await cmd2.ExecuteReaderAsync();
-            while (await r2.ReadAsync()) products.Add((r2.GetInt32(0), r2.GetString(1)));
+            while (await r2.ReadAsync())
+            {
+                products.Add((r2.GetInt32(0), r2.GetString(1)));
+            }
         }
+
 
         await using (var cmd3 = con.CreateCommand())
         {

@@ -74,7 +74,6 @@ public class AdminHomeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // TODO VIEW
     private async Task<LogsPageVm> LoadLogsAsync(int page, int size)
     {
         page = Math.Max(1, page);
@@ -85,7 +84,7 @@ public class AdminHomeController : Controller
         long total;
         await using (var countCmd = con.CreateCommand())
         {
-            countCmd.CommandText = "SELECT COUNT(*) FROM LOG";
+            countCmd.CommandText = "SELECT COUNT(*) FROM VW_LOGS_ADMIN";
             total = Convert.ToInt64(await countCmd.ExecuteScalarAsync());
         }
 

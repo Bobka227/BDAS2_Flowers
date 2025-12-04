@@ -86,7 +86,6 @@ public class AdminPaymentsController : Controller
     }
 
 
-    // TODO VIEW
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -96,26 +95,28 @@ public class AdminPaymentsController : Controller
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"
-              SELECT PAYMENTID,
-                     ""Date"",
-                     AMOUNT,
-                     PAYMENTTYPE
-                FROM PAYMENT
-               WHERE PAYMENTID = :id";
+          SELECT ID,
+                 PAY_DATE,
+                 AMOUNT,
+                 METHOD_CODE
+            FROM VW_ADMIN_PAYMENTS
+           WHERE ID = :id";
+
             cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, id, ParameterDirection.Input));
 
             await using var r = await cmd.ExecuteReaderAsync();
             if (!await r.ReadAsync())
                 return NotFound();
 
-            vm.Id = DbRead.GetInt32(r, 0);
-            vm.PayDate = r.GetDateTime(1);
-            vm.Amount = (decimal)r.GetDecimal(2);
-            vm.MethodCode = r.GetString(3);
+            vm.Id = DbRead.GetInt32(r, 0);   
+            vm.PayDate = r.GetDateTime(1);         
+            vm.Amount = (decimal)r.GetDecimal(2); 
+            vm.MethodCode = r.GetString(3);        
         }
 
         return View("/Views/AdminPanel/Payments/Edit.cshtml", vm);
     }
+
 
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]

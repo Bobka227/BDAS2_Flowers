@@ -52,13 +52,20 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             await using var con = await _db.CreateOpenAsync();
             await using var cmd = con.CreateCommand();
-            (cmd as OracleCommand)!.BindByName = true;
-            // TODO VIEW
-            cmd.CommandText = "SELECT u.USERID FROM \"USER\" u WHERE UPPER(u.EMAIL)=UPPER(:e)";
-            (cmd as OracleCommand)!.Parameters.Add("e", OracleDbType.Varchar2, 100).Value = email;
-            var res = await cmd.ExecuteScalarAsync();
+            var oc = (OracleCommand)cmd;
+            oc.BindByName = true;
+
+            oc.CommandText = @"
+              SELECT USERID
+              FROM VW_USERS_SECURITY
+              WHERE UPPER(EMAIL) = UPPER(:e)";
+
+            oc.Parameters.Add("e", OracleDbType.Varchar2, 100).Value = email;
+
+            var res = await oc.ExecuteScalarAsync();
             return AsInt(res);
         }
+
 
         private static async Task<int> GetOrCreateDeliveryMethodId(OracleConnection con, OracleTransaction tx, string name)
         {
@@ -87,27 +94,29 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 read.Transaction = tx;
                 read.BindByName = true;
-                // TODO VIEW
-                read.CommandText = "SELECT MAX(DELIVERYMETHODID) FROM DELIVERY_METHOD WHERE UPPER(DELIVERYNAME)=UPPER(:n)";
+                read.CommandText = @"
+                SELECT MAX(ID)
+                  FROM VW_DELIVERY_METHODS
+                 WHERE UPPER(NAME) = UPPER(:n)";
                 read.Parameters.Add("n", OracleDbType.Varchar2, 200).Value = name;
                 var v = await read.ExecuteScalarAsync();
                 return AsInt(v);
             }
         }
 
+
         private static async Task<int> ResolveEventOrganizationProductId(
-            OracleConnection con, int eventTypeId, OracleTransaction tx)
+             OracleConnection con, int eventTypeId, OracleTransaction tx)
         {
             await using (var cmd = con.CreateCommand())
             {
-                // TODO VIEW
                 cmd.Transaction = tx;
                 cmd.BindByName = true;
                 cmd.CommandText = @"
-            SELECT p.productid
-              FROM product p
-              JOIN event_type et ON et.eventtypeid = :id
-             WHERE UPPER(p.name) = UPPER('Organization: ' || et.eventname)";
+            SELECT pe.PRODUCTID
+              FROM VW_PRODUCT_EDIT pe
+              JOIN VW_EVENT_TYPES et ON et.ID = :id
+             WHERE UPPER(pe.NAME) = UPPER('Organization: ' || et.NAME)";
                 cmd.Parameters.Add("id", OracleDbType.Int32).Value = eventTypeId;
 
                 var res = await cmd.ExecuteScalarAsync();
@@ -118,7 +127,10 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 cmd2.Transaction = tx;
                 cmd2.BindByName = true;
-                cmd2.CommandText = @"SELECT productid FROM product WHERE UPPER(name) = 'EVENT ORGANIZATION'";// TODO VIEW
+                cmd2.CommandText = @"
+            SELECT PRODUCTID
+              FROM VW_PRODUCT_EDIT
+             WHERE UPPER(NAME) = 'EVENT ORGANIZATION'";
                 var res2 = await cmd2.ExecuteScalarAsync();
                 if (res2 != null && res2 != DBNull.Value) return AsInt(res2);
             }
@@ -127,7 +139,10 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             {
                 cmd3.Transaction = tx;
                 cmd3.BindByName = true;
-                cmd3.CommandText = @"SELECT MIN(productid) FROM product WHERE UPPER(name) LIKE 'ORGANIZATION%'";// TODO VIEW
+                cmd3.CommandText = @"
+            SELECT MIN(PRODUCTID)
+              FROM VW_PRODUCT_EDIT
+             WHERE UPPER(NAME) LIKE 'ORGANIZATION%'";
                 var res3 = await cmd3.ExecuteScalarAsync();
                 if (res3 != null && res3 != DBNull.Value) return AsInt(res3);
             }
@@ -135,7 +150,10 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             await using (var cmd4 = con.CreateCommand())
             {
                 cmd4.Transaction = tx;
-                cmd4.CommandText = @"SELECT MIN(productid) FROM product";// TODO VIEW
+                cmd4.BindByName = true;
+                cmd4.CommandText = @"
+            SELECT MIN(PRODUCTID)
+              FROM VW_PRODUCT_EDIT";
                 var res4 = await cmd4.ExecuteScalarAsync();
                 if (res4 != null && res4 != DBNull.Value) return AsInt(res4);
             }
@@ -144,6 +162,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 "V tabulce PRODUCT není žádná položka. Přidej alespoň jeden produkt (např. 'Event Organization'), " +
                 "aby šlo objednávku dokončit.");
         }
+
 
 
         [HttpGet]

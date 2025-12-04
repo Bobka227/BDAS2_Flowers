@@ -32,10 +32,10 @@ public class CartController : Controller
 
         foreach (var it in need)
         {
-            await using var cmd = new OracleCommand( // TODO VIEW
-                @"SELECT Name, CAST(Price AS NUMBER(10,2)) 
-                    FROM PRODUCT 
-                   WHERE ProductId = :id", con);
+            await using var cmd = new OracleCommand(
+                @"SELECT NAME, PRICE
+                    FROM VW_PRODUCT_EDIT
+                   WHERE PRODUCTID = :id", con);
             cmd.Parameters.Add("id", it.ProductId);
             await using var rd = await cmd.ExecuteReaderAsync();
             if (await rd.ReadAsync())
@@ -43,6 +43,7 @@ public class CartController : Controller
                 it.Title = rd.GetString(0);
                 it.UnitPrice = (decimal)rd.GetDecimal(1);
             }
+
         }
         HttpContext.Session.SetJson(CartKey, cart);
     }
@@ -78,10 +79,10 @@ public class CartController : Controller
         string title;
         decimal price;
 
-        await using (var cmd = new OracleCommand( // TODO VIEW
-            @"SELECT Name, CAST(Price AS NUMBER(10,2)) 
-            FROM PRODUCT 
-           WHERE ProductId = :id", con))
+        await using (var cmd = new OracleCommand(
+            @"SELECT NAME, PRICE
+                FROM VW_PRODUCT_EDIT
+               WHERE PRODUCTID = :id", con))
         {
             cmd.Parameters.Add("id", productId);
             await using var rd = await cmd.ExecuteReaderAsync();
@@ -97,6 +98,7 @@ public class CartController : Controller
             title = rd.GetString(0);
             price = (decimal)rd.GetDecimal(1);
         }
+
 
         var cart = HttpContext.Session.GetJson<CartVm>(CartKey) ?? new CartVm();
         var line = cart.Items.FirstOrDefault(i => i.ProductId == productId);

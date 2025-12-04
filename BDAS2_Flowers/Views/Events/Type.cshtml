@@ -5,15 +5,16 @@
 
     var images = (IEnumerable<string>?)ViewBag.Images ?? Enumerable.Empty<string>();
 
-    string[] lines = (Model.Description ?? "").Replace("\r", "").Split('\n');
-    bool IsBullet(string s) => s.TrimStart().StartsWith("•");
-    var intro = lines.TakeWhile(l => !IsBullet(l)).Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
-    var bullets = lines.SkipWhile(l => !IsBullet(l))
-                       .Select(l => l.Trim().TrimStart('•').Trim())
-                       .Where(l => l.Length > 0)
-                       .ToList();
-}
+    var desc = (Model.Description ?? "").Trim();
 
+    var parts = desc.Split('•')
+                    .Select(p => p.Trim())
+                    .Where(p => p.Length > 0)
+                    .ToList();
+
+    var intro = parts.Any() ? new List<string> { parts[0] } : new List<string>();
+    var bullets = parts.Skip(1).ToList();
+}
 <style>
   .carousel-container { max-width: 980px; margin: 0 auto; }
   .carousel-control-prev-icon, .carousel-control-next-icon {

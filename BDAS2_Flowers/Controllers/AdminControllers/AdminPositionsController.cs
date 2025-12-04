@@ -19,16 +19,14 @@ public class AdminPositionsController : Controller
     {
         var rows = new List<AdminPositionRowVm>();
 
-        // TODO VIEW/PROCEDURE
         await using var conn = await _db.CreateOpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT p.POSITIONID,
-                   p.POSITIONNAME,
-                   (SELECT COUNT(*) FROM EMPLOYEER e
-                     WHERE e.POSITIONID = p.POSITIONID) AS EMP_COUNT
-            FROM POSITION p
-            ORDER BY p.POSITIONNAME";
+        SELECT ID,
+               NAME,
+               EMP_COUNT
+          FROM VW_ADMIN_POSITIONS
+         ORDER BY NAME";
 
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
@@ -43,6 +41,7 @@ public class AdminPositionsController : Controller
 
         return View("/Views/AdminPanel/Positions/Index.cshtml", rows);
     }
+
 
     [HttpGet("create")]
     public IActionResult Create()
@@ -84,11 +83,13 @@ public class AdminPositionsController : Controller
 
         await using (var cmd = conn.CreateCommand())
         {
-            // TODO VIEW
             cmd.CommandText = @"
-          SELECT POSITIONID, POSITIONNAME
-            FROM POSITION
-           WHERE POSITIONID = :id";
+          SELECT ID,
+                 NAME,
+                 EMP_COUNT
+            FROM VW_ADMIN_POSITIONS
+           WHERE ID = :id";
+
             cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, id, ParameterDirection.Input));
 
             await using var r = await cmd.ExecuteReaderAsync();
@@ -97,20 +98,11 @@ public class AdminPositionsController : Controller
 
             vm.Id = DbRead.GetInt32(r, 0);
             vm.Name = r.GetString(1);
-        }
-
-        // TODO VIEW
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = @"SELECT COUNT(*) FROM EMPLOYEER WHERE POSITIONID = :id";
-            cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32, id, ParameterDirection.Input));
-
-            vm.EmployeeCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            vm.EmployeeCount = DbRead.GetInt32(r, 2);
         }
 
         return View("/Views/AdminPanel/Positions/Edit.cshtml", vm);
     }
-
 
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]
