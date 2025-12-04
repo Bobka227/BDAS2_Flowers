@@ -6,6 +6,7 @@ using System.Data;
 using System.Security.Claims;
 using BDAS2_Flowers.Data;
 using BDAS2_Flowers.Models.ViewModels.OrderModels;
+using Microsoft.Extensions.Logging;
 
 namespace BDAS2_Flowers.Controllers.OrderControllers
 {
@@ -43,16 +44,12 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             };
 
             vm.DeliveryMethods = await LoadIdNameAsync(
-                @"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
-
-            vm.Shops = await LoadIdNameAsync(
-                @"SELECT ID, NAME FROM VW_SHOPS");
-
+                @"SELECT ID, NAME FROM VW_DELIVERY_METHODS WHERE UPPER(NAME) <> 'ON-SITE EVENT'");
+            vm.Shops = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_SHOPS");
             vm.Addresses = await LoadIdNameAsync(@"
                 SELECT ADDRESSID AS ID,
                        STREET || ' ' || HOUSENUMBER || ', ' || POSTALCODE AS NAME
-                  FROM VW_ADMIN_ADDRESSES");
-
+                FROM VW_ADMIN_ADDRESSES");
             vm.Products = await LoadIdNameAsync(@"
                 SELECT PRODUCTID AS ID,
                        TITLE     AS NAME
@@ -62,14 +59,19 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             if (cart != null && cart.Items.Any())
             {
                 vm.Items = cart.Items
-                    .Select(i => new OrderItemVm { ProductId = i.ProductId, Quantity = i.Quantity })
+                    .Select(i => new OrderItemVm
+                    {
+                        ProductId = i.ProductId,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.UnitPrice
+                    })
                     .ToList();
 
                 vm.CartTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
             }
             else
             {
-                vm.Items.Add(new OrderItemVm());
+                vm.Items.Add(new OrderItemVm { Quantity = 1, UnitPrice = 0m });
                 vm.CartTotal = 0m;
             }
 
@@ -119,7 +121,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
 
             if (errors.Any())
             {
-                vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_DELIVERY_METHODS");
+                vm.DeliveryMethods = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_DELIVERY_METHODS WHERE UPPER(NAME) <> 'ON-SITE EVENT'");
                 vm.Shops = await LoadIdNameAsync(@"SELECT ID, NAME FROM VW_SHOPS");
                 vm.Addresses = await LoadIdNameAsync(@"
                     SELECT ADDRESSID AS ID,
@@ -129,6 +131,10 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     SELECT PRODUCTID AS ID,
                            TITLE     AS NAME
                       FROM VW_CATALOG_PRODUCTS");
+
+                vm.CartTotal = vm.Items?
+                    .Where(i => i.ProductId > 0 && i.Quantity > 0)
+                    .Sum(i => i.UnitPrice * i.Quantity) ?? 0m;
 
                 TempData["OrderError"] = errors.First();
                 return View(vm);

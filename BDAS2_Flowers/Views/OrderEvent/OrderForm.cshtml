@@ -1,10 +1,16 @@
 ﻿@model BDAS2_Flowers.Models.ViewModels.EventModels.EventOrderVm
 @{
-    ViewData["Title"] = "Objednat organizaci";
+    ViewData["Title"] = "Objednat organizaci akce";
+
+    var baseService = Model.Products?
+        .FirstOrDefault(p => string.Equals(
+            p.Title,
+            "Organizace akce (poplatek)",
+            StringComparison.OrdinalIgnoreCase));
 }
 
 <div class="container py-4">
-    <h1 class="mb-4">Objednat organizaci</h1>
+    <h1 class="mb-4">Objednat organizaci akce</h1>
 
     <form asp-action="Order" asp-controller="OrderEvent" method="post"
           class="p-4 rounded-4 bg-white shadow-sm">
@@ -13,7 +19,7 @@
         <input type="hidden" asp-for="EventTypeId" />
 
         <div class="row g-4">
-            <div class="col-lg-5">
+            <div class="col-lg-4">
                 <h2 class="h5 mb-3">Detaily akce</h2>
 
                 <div class="mb-3">
@@ -28,9 +34,9 @@
                         <option value="">(vyberte prodejnu)</option>
                         @foreach (var s in Model.Shops)
                         {
-                            <option value="@s.Id" selected="@(s.Id == Model.ShopId)">
+                                <option value="@s.Id" selected="@(s.Id == Model.ShopId)">
                                 @s.Name
-                            </option>
+                                </option>
                         }
                     </select>
                     <span asp-validation-for="ShopId" class="text-danger"></span>
@@ -55,64 +61,36 @@
                 </div>
 
                 <div class="mt-3">
-                    <label class="form-label d-block">Platba</label>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" asp-for="PaymentType" value="cash" id="payCash">
-                        <label class="form-check-label" for="payCash">Hotově</label>
+                    <label class="form-label">Organizace akce (poplatek)</label>
+                    <div class="fw-semibold">
+                                        @(baseService != null
+                                                ? baseService.PriceFrom.ToString("0 Kč")
+                                                : "1500 Kč") / balíček
                     </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" asp-for="PaymentType" value="card" id="payCard">
-                        <label class="form-check-label" for="payCard">Kartou</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" asp-for="PaymentType" value="cupon" id="payCupon">
-                        <label class="form-check-label" for="payCupon">Kupon</label>
-                    </div>
-                    <span asp-validation-for="PaymentType" class="text-danger d-block"></span>
-                </div>
 
-                <div id="cardFields" class="mt-3">
-                    <div class="mb-2">
-                        <label asp-for="CardNumber" class="form-label"></label>
-                        <input asp-for="CardNumber"
-                               class="form-control"
-                               placeholder="1234 5678 9012 3456" />
-                        <span asp-validation-for="CardNumber" class="text-danger"></span>
+                    <div class="form-text">
+                        Povinná služba zahrnutá v každé objednávce akce
+                        (příprava, návrh a základní koordinace).
                     </div>
-                </div>
-
-                <div id="couponFields" class="mt-3">
-                    <div class="mb-2">
-                        <label asp-for="CouponCode" class="form-label"></label>
-                        <input asp-for="CouponCode" class="form-control" placeholder="Např. FLOWERS2025" />
-                        <span asp-validation-for="CouponCode" class="text-danger"></span>
-                    </div>
-                </div>
-
-
-                <div class="mt-3">
-                    <label asp-for="Quantity" class="form-label">Balíček organizace</label>
-                    <input asp-for="Quantity" class="form-control" type="number" min="1" />
-                    <span class="form-text">
-                        Základní služba „organizace akce“ (příprava, návrh, koordinace).
-                    </span>
-                    <span asp-validation-for="Quantity" class="text-danger"></span>
+                    <input type="hidden" asp-for="Quantity" value="1" />
                 </div>
             </div>
 
-            <div class="col-lg-7">
-                <h2 class="h5 mb-3 d-flex justify-content-between align-items-center">
-                    <span>Konfigurátor výzdoby</span>
-                    <small class="text-muted">Zvolte, co chcete na své akci</small>
+            <div class="col-lg-8">
+                <h2 class="h5 mb-1 d-flex justify-content-between align-items-center">
+                    <span>Služby pro Vaši akci</span>
+                    <small class="text-muted">Vyberte, co chcete zahrnout do návrhu</small>
                 </h2>
 
                 @if (Model.Products?.Any() == true)
                 {
-                    <div class="row g-3">
+                        <div class="row g-3 mt-1" id="servicesList">
                         @for (int i = 0; i < Model.Products.Count; i++)
                         {
                             var p = Model.Products[i];
-                            <div class="col-12 col-md-6">
+                            var isBase = baseService != null && p.ProductId == baseService.ProductId;
+
+                            <div class="col-12 col-md-6 @(isBase ? "d-none" : "")">
                                 <div class="card h-100 shadow-sm border-0">
                                     <div class="card-body d-flex flex-column">
                                         <input type="hidden" asp-for="Products[@i].ProductId" />
@@ -123,55 +101,76 @@
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
                                                 <div class="fw-semibold">@p.Title</div>
-                                                @if (!string.IsNullOrWhiteSpace(p.Subtitle))
-                                                {
-                                                    <div class="text-muted small">@p.Subtitle</div>
-                                                }
+                                                                @if (!string.IsNullOrWhiteSpace(p.Subtitle))
+                                                                {
+                                                        <div class="text-muted small">@p.Subtitle</div>
+                                                                }
                                             </div>
-                                            @if (p.Recommended)
-                                            {
-                                                <span class="badge bg-success-subtle text-success">
-                                                    Doporučujeme
-                                                </span>
-                                            }
+                                                            @if (p.Recommended && !isBase)
+                                                            {
+                                                    <span class="badge bg-success-subtle text-success">
+                                                        Doporučujeme
+                                                    </span>
+                                                            }
                                         </div>
 
                                         <div class="mb-2">
-                                            <span class="fw-semibold">@p.PriceFrom.ToString("0 Kč")</span>
+                                            <span class="fw-semibold">
+                                                                @p.PriceFrom.ToString("0 Kč")
+                                            </span>
+                                            <span class="text-muted small"> / balíček</span>
                                         </div>
 
                                         <div class="mt-auto d-flex align-items-center justify-content-between">
-                                            <label class="form-label mb-0 me-2 small">
-                                                Počet ks
-                                            </label>
-                                            <input asp-for="Products[@i].Quantity"
-                                                   type="number" min="0"
-                                                   class="form-control form-control-sm text-end"
-                                                   style="max-width:90px;" />
+                                                            @if (!isBase)
+                                                            {
+                                                    <label class="form-label mb-0 me-2 small">
+                                                        Počet balíčků
+                                                    </label>
+                                                    <input asp-for="Products[@i].Quantity"
+                                                           type="number" min="0"
+                                                           class="form-control form-control-sm text-end service-qty"
+                                                           data-price="@p.PriceFrom"
+                                                           style="max-width:90px;" />
+                                                            }
+                                                            else
+                                                            {
+                                                    <input asp-for="Products[@i].Quantity" type="hidden" value="0" />
+                                                            }
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         }
-                    </div>
+                        </div>
 
-                    <p class="text-muted small mt-2">
-                        Položky s nulovým počtem se do objednávky nepřidají.
-                    </p>
+                        <p class="text-muted small mt-2">
+                            Položky s nulovým počtem se do objednávky nepřidají.
+                        </p>
+
+                        <div class="mt-3 p-3 rounded-3 bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">Předběžná cena doplňkových služeb</div>
+                                <div class="text-muted small">
+                                    Orientační cena za vybrané služby (bez základního balíčku a případných úprav v návrhu).
+                                </div>
+                            </div>
+                            <div class="fs-5 fw-bold" id="servicesTotal">0 Kč</div>
+                        </div>
                 }
                 else
                 {
-                    <p class="text-muted">
-                        Zatím nemáme připravené konkrétní produkty pro tuto akci.
-                        Pošlete nám objednávku a návrh připravíme individuálně.
-                    </p>
+                        <p class="text-muted mt-2">
+                            Zatím nemáme připravené konkrétní služby pro tuto akci.
+                            Pošlete nám objednávku a návrh připravíme individuálně.
+                        </p>
                 }
             </div>
         </div>
 
         <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-brand">
-                Odeslat objednávku
+                Odeslat objednávku k posouzení
             </button>
             <a asp-controller="Events"
                asp-action="Type"
@@ -184,33 +183,32 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+        <partial name="_ValidationScriptsPartial" />
 
-    <script>
-        (function () {
-            function updatePaymentPanels() {
-                const selected = document.querySelector('input[name="PaymentType"]:checked');
-                const val = selected ? selected.value : "";
-                const card = document.getElementById('cardFields');
-                const coupon = document.getElementById('couponFields');
-
-                if (card) card.classList.add('d-none');
-                if (coupon) coupon.classList.add('d-none');
-
-                if (val === 'card' && card) {
-                    card.classList.remove('d-none');
-                } else if (val === 'cupon' && coupon) {
-                    coupon.classList.remove('d-none');
+        <script>
+            (function () {
+                function recalcTotal() {
+                    let total = 0;
+                    document.querySelectorAll('.service-qty').forEach(function (input) {
+                        const qty = parseInt(input.value || '0', 10);
+                        const price = parseFloat(input.getAttribute('data-price') || '0');
+                        if (!isNaN(qty) && !isNaN(price) && qty > 0) {
+                            total += qty * price;
+                        }
+                    });
+                    const lbl = document.getElementById('servicesTotal');
+                    if (lbl) {
+                        lbl.textContent = total.toLocaleString('cs-CZ') + ' Kč';
+                    }
                 }
-            }
 
-            document.addEventListener('DOMContentLoaded', function () {
-                document.querySelectorAll('input[name="PaymentType"]').forEach(r => {
-                    r.addEventListener('change', updatePaymentPanels);
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.querySelectorAll('.service-qty').forEach(function (input) {
+                        input.addEventListener('input', recalcTotal);
+                        input.addEventListener('change', recalcTotal);
+                    });
+                    recalcTotal();
                 });
-                updatePaymentPanels();
-            });
-        })();
-    </script>
+            })();
+        </script>
 }
-
