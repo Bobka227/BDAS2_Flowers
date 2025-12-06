@@ -7,16 +7,32 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers
 {
+    /// <summary>
+    /// Administrátorský controller pro správu slevových kupónů.
+    /// Umožňuje jejich vyhledávání, vytváření, úpravu a mazání.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     public class AdminCouponsController : Controller
     {
         private readonly IDbFactory _db;
 
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="AdminCouponsController"/> s továrnou databázových připojení.
+        /// </summary>
+        /// <param name="db">Implementace továrny pro vytváření otevřených databázových připojení.</param>
         public AdminCouponsController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Vrací identifikaci aktuálního uživatele (administrátora) pro auditní záznamy v databázi.
+        /// </summary>
         private string CurrentActor =>
             User?.Identity?.Name ?? User?.FindFirst("email")?.Value ?? "UNKNOWN";
 
+        /// <summary>
+        /// Zobrazí seznam kupónů s možností filtrování podle kódu.
+        /// </summary>
+        /// <param name="q">Volitelný textový filtr, část kódu kupónu.</param>
+        /// <returns>View s přehledem kupónů pro administraci.</returns>
         [HttpGet("/admin/coupons")]
         public async Task<IActionResult> Index(string? q)
         {
@@ -54,6 +70,13 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return View("~/Views/AdminPanel/Coupons/Index.cshtml", vm);
         }
 
+        /// <summary>
+        /// Vytvoří nový slevový kupón pomocí uložené procedury <c>PRC_COUPON_CODE_CREATE</c>.
+        /// </summary>
+        /// <param name="code">Textový kód kupónu.</param>
+        /// <param name="bonus">Hodnota bonusu (např. částka nebo procento).</param>
+        /// <param name="dateExpiry">Datum, do kterého je kupón platný.</param>
+        /// <returns>Přesměrování zpět na seznam kupónů.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string code, int bonus, DateTime? dateExpiry)
@@ -89,6 +112,14 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return RedirectToAction(nameof(Index));
         }
 
+        /// <summary>
+        /// Aktualizuje existující kupón pomocí uložené procedury <c>PRC_COUPON_CODE_UPDATE</c>.
+        /// </summary>
+        /// <param name="id">Identifikátor upravovaného kupónu.</param>
+        /// <param name="code">Nový textový kód kupónu.</param>
+        /// <param name="bonus">Nová hodnota bonusu kupónu.</param>
+        /// <param name="dateExpiry">Nové datum expirace kupónu.</param>
+        /// <returns>Přesměrování zpět na seznam kupónů.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Update(int id, string code, int bonus, DateTime? dateExpiry)
@@ -125,6 +156,11 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return RedirectToAction(nameof(Index));
         }
 
+        /// <summary>
+        /// Smaže existující kupón pomocí uložené procedury <c>PRC_COUPON_CODE_DELETE</c>.
+        /// </summary>
+        /// <param name="id">Identifikátor mazáného kupónu.</param>
+        /// <returns>Přesměrování zpět na seznam kupónů.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -158,5 +194,4 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return RedirectToAction(nameof(Index));
         }
     }
-       
 }

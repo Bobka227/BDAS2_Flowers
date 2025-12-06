@@ -6,13 +6,28 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu typů produktů.
+/// Umožňuje typy zobrazit, vytvářet, přejmenovávat a mazat.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/product-types")]
 public class AdminProductTypesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminProductTypesController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminProductTypesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech typů produktů.
+    /// </summary>
+    /// <returns>
+    /// View s kolekcí dvojic (Id, název typu) načtenou z pohledu <c>VW_PRODUCT_TYPES</c>.
+    /// </returns>
     // GET /admin/product-types
     [HttpGet("")]
     public async Task<IActionResult> Index()
@@ -29,6 +44,11 @@ public class AdminProductTypesController : Controller
         return View("/Views/AdminPanel/ProductTypes/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří nový typ produktu pomocí uložené procedury <c>ST72861.PRC_PRODUCT_TYPE_CREATE</c>.
+    /// </summary>
+    /// <param name="name">Název nového typu produktu.</param>
+    /// <returns>Přesměrování zpět na seznam typů produktů s výslednou zprávou.</returns>
     // POST /admin/product-types/create
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
@@ -53,6 +73,12 @@ public class AdminProductTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Přejmenuje existující typ produktu pomocí uložené procedury <c>ST72861.PRC_PRODUCT_TYPE_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor přejmenovávaného typu produktu.</param>
+    /// <param name="name">Nový název typu produktu.</param>
+    /// <returns>Přesměrování zpět na seznam typů produktů s výslednou zprávou.</returns>
     // POST /admin/product-types/{id}/rename
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/rename")]
@@ -77,6 +103,11 @@ public class AdminProductTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže existující typ produktu pomocí uložené procedury <c>ST72861.PRC_PRODUCT_TYPE_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáného typu produktu.</param>
+    /// <returns>Přesměrování zpět na seznam typů produktů s výslednou zprávou.</returns>
     // POST /admin/product-types/{id}/delete
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]

@@ -6,17 +6,37 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.EventControllers
 {
+    /// <summary>
+    /// Public controller pro zobrazení detailu typu události (např. svatba, oslava).
+    /// Z databáze načítá informace o typu události a k tomu připravuje sadu ukázkových obrázků.
+    /// </summary>
     public class EventsController : Controller
     {
         private readonly IDbFactory _db;
         private readonly IWebHostEnvironment _env;
 
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="EventsController"/> s přístupem k databázi
+        /// a informacím o webovém prostředí (např. cesta k wwwroot).
+        /// </summary>
+        /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
+        /// <param name="env">Prostředí aplikace, sloužící zejména k získání fyzických cest k souborům.</param>
         public EventsController(IDbFactory db, IWebHostEnvironment env)
         {
             _db = db;
             _env = env;
         }
 
+        /// <summary>
+        /// Zobrazí stránku s popisem konkrétního typu události.
+        /// Kromě údajů z databáze také vyhledá ilustrační obrázky v adresáři
+        /// <c>wwwroot/images/events</c> a předá je do view.
+        /// </summary>
+        /// <param name="id">Identifikátor typu události.</param>
+        /// <returns>
+        /// View <c>Type</c> s modelem <see cref="EventTypeVm"/>,
+        /// nebo <see cref="NotFoundResult"/>, pokud typ události neexistuje.
+        /// </returns>
         [HttpGet("/events/{id:int}")]
         public async Task<IActionResult> Type(int id)
         {
@@ -39,9 +59,9 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 {
                     vm = new EventTypeVm
                     {
-                        EventTypeId = r.GetInt32(0),                         
-                        Name = r.GetString(1),                       
-                        Description = r.IsDBNull(2) ? "" : r.GetString(2)    
+                        EventTypeId = r.GetInt32(0),
+                        Name = r.GetString(1),
+                        Description = r.IsDBNull(2) ? "" : r.GetString(2)
                     };
                 }
             }

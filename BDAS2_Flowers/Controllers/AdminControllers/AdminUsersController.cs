@@ -10,13 +10,31 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu uživatelů.
+/// Umožňuje zobrazit přehled uživatelů, měnit jejich role,
+/// mazat účty, zobrazovat jejich objednávky a přihlásit se za vybraného uživatele (impersonace).
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/users")]
 public class AdminUsersController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminUsersController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminUsersController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam uživatelů pro administraci včetně jejich role,
+    /// počtu objednávek a segmentu (typ zákazníka).
+    /// </summary>
+    /// <returns>
+    /// View <c>/Views/AdminPanel/Users/Users.cshtml</c> s kolekcí řádků
+    /// (e-mail, jméno, role, počet objednávek, segment).
+    /// </returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -44,7 +62,14 @@ public class AdminUsersController : Controller
         return View("/Views/AdminPanel/Users/Users.cshtml", rows);
     }
 
-
+    /// <summary>
+    /// Změní roli uživatele pomocí uložené procedury <c>PRC_SET_USER_ROLE</c>.
+    /// </summary>
+    /// <param name="email">E-mail uživatele, kterému se má změnit role.</param>
+    /// <param name="roleName">Název nové role (musí existovat v systému).</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam uživatelů s výslednou zprávou uloženou v <c>TempData["Msg"]</c>.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{email}/role")]
     public async Task<IActionResult> SetRole(string email, string roleName)
@@ -68,6 +93,14 @@ public class AdminUsersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže uživatele pomocí uložené procedury <c>ST72861.PRC_USER_DELETE</c>.
+    /// Zabraňuje smazání aktuálně přihlášeného administrátora a uživatelů s objednávkami.
+    /// </summary>
+    /// <param name="email">E-mail mazaného uživatele.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam uživatelů s výslednou zprávou v <c>TempData["Msg"]</c>.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{email}/delete")]
     public async Task<IActionResult> Delete(string email)
@@ -121,7 +154,14 @@ public class AdminUsersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    /// <summary>
+    /// Zobrazí přehled objednávek konkrétního uživatele včetně seznamu možných statusů.
+    /// </summary>
+    /// <param name="email">E-mail uživatele, jehož objednávky se mají zobrazit.</param>
+    /// <returns>
+    /// View <c>/Views/AdminPanel/Users/UserOrders.cshtml</c> s modelem <see cref="AdminUserOrdersVm"/>,
+    /// nebo <see cref="NotFoundResult"/>, pokud uživatel neexistuje.
+    /// </returns>
     [HttpGet("{email}/orders")]
     public async Task<IActionResult> UserOrders(string email)
     {
@@ -129,6 +169,7 @@ public class AdminUsersController : Controller
 
         await using var conn = await _db.CreateOpenAsync();
 
+        // Načtení jména uživatele
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"
@@ -145,7 +186,7 @@ public class AdminUsersController : Controller
             vm.FullName = Convert.ToString(nameObj)!;
         }
 
-
+        // Načtení seznamu statusů objednávek
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"SELECT NAME FROM VW_STATUSES ORDER BY NAME";
@@ -153,6 +194,7 @@ public class AdminUsersController : Controller
             while (await rd.ReadAsync()) vm.StatusNames.Add(rd.GetString(0));
         }
 
+        // Načtení objednávek daného uživatele
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"
@@ -179,7 +221,16 @@ public class AdminUsersController : Controller
         return View("/Views/AdminPanel/Users/UserOrders.cshtml", vm);
     }
 
-
+    /// <summary>
+    /// Přihlásí administrátora jako jiného uživatele (impersonace).
+    /// Vytvoří novou identitu založenou na záznamu z <c>VW_USERS_SECURITY</c>
+    /// a uloží informaci o tom, kdo impersonaci provedl, do claimu <c>ImpersonatedBy</c>.
+    /// </summary>
+    /// <param name="email">E-mail uživatele, za kterého se má administrátor přihlásit.</param>
+    /// <returns>
+    /// Přesměrování na domovskou stránku (<c>Home/Index</c>) nebo zpět na seznam uživatelů
+    /// v případě chyby.
+    /// </returns>
     [HttpPost("impersonate")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Impersonate(string email)
@@ -218,13 +269,13 @@ public class AdminUsersController : Controller
         var roleName = reader.GetString(3);
 
         var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-        new Claim(ClaimTypes.Name, fullName),
-        new Claim(ClaimTypes.Email, userMail),
-        new Claim(ClaimTypes.Role, roleName),
-        new Claim("ImpersonatedBy", adminEmail)
-    };
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Name, fullName),
+            new Claim(ClaimTypes.Email, userMail),
+            new Claim(ClaimTypes.Role, roleName),
+            new Claim("ImpersonatedBy", adminEmail)
+        };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
@@ -234,7 +285,4 @@ public class AdminUsersController : Controller
 
         return RedirectToAction("Index", "Home");
     }
-
-
-
 }

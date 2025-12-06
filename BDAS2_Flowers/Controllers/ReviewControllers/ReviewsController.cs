@@ -8,14 +8,35 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.ReviewControllers
 {
+    /// <summary>
+    /// Řadič pro práci se zákaznickými recenzemi.
+    /// Zajišťuje zobrazení všech recenzí a přidávání nových hodnocení
+    /// přihlášenými uživateli.
+    /// </summary>
     public class ReviewsController : Controller
     {
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Vytvoří novou instanci řadiče recenzí s přístupem k databázi.
+        /// </summary>
+        /// <param name="db">Továrna na databázová připojení.</param>
         public ReviewsController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Vrátí interní ID aktuálně přihlášeného uživatele
+        /// z <see cref="ClaimTypes.NameIdentifier"/>.
+        /// </summary>
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
+        /// <summary>
+        /// Zobrazí stránku s přehledem recenzí.
+        /// Načte data z pohledu <c>VW_REVIEWS</c> a předá je do view modelu.
+        /// </summary>
+        /// <returns>
+        /// View s modelem <see cref="ReviewsPageVm"/> obsahujícím seznam recenzí.
+        /// </returns>
         [HttpGet("/Recenze")]
         public async Task<IActionResult> Index()
         {
@@ -48,6 +69,19 @@ namespace BDAS2_Flowers.Controllers.ReviewControllers
             return View("~/Views/Shared/Components/InfoPages/Recenze.cshtml", vm);
         }
 
+        /// <summary>
+        /// Přidá novou recenzi od přihlášeného uživatele.
+        /// Ověří vstupní hodnoty, v případě chyby znovu zobrazí stránku s recenzemi,
+        /// jinak zavolá proceduru <c>PRC_REVIEW_CREATE</c> a recenzi uloží.
+        /// </summary>
+        /// <param name="m">
+        /// View model se vstupními daty nové recenze
+        /// (počet hvězdiček, text, volitelně město).
+        /// </param>
+        /// <returns>
+        /// Při chybné validaci vrací view se zobrazenými chybami,
+        /// jinak redirect na akci <see cref="Index"/>.
+        /// </returns>
         [Authorize]
         [HttpPost("/Recenze")]
         [ValidateAntiForgeryToken]

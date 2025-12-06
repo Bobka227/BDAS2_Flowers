@@ -4,11 +4,29 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.MediaControllers
 {
+    /// <summary>
+    /// Controller pro obsluhu binárních médií uložených v databázi (avatary uživatelů, produktové obrázky).
+    /// Vrací obrázky jako HTTP odpověď s odpovídajícím MIME typem.
+    /// </summary>
     public class MediaController : Controller
     {
         private readonly IConfiguration _cfg;
+
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="MediaController"/> s přístupem ke konfiguraci aplikace.
+        /// </summary>
+        /// <param name="cfg">Konfigurace aplikace používaná pro načtení connection stringu k Oracle databázi.</param>
         public MediaController(IConfiguration cfg) => _cfg = cfg;
 
+        /// <summary>
+        /// Vrátí avatar uživatele jako obrázek načtený z pohledu <c>VW_MEDIA_AVATAR</c>.
+        /// Pokud avatar neexistuje, vrací HTTP 404.
+        /// </summary>
+        /// <param name="userId">Identifikátor uživatele, jehož avatar se má načíst.</param>
+        /// <returns>
+        /// Binární obsah obrázku s odpovídajícím MIME typem,
+        /// nebo <see cref="NotFoundResult"/>, pokud avatar neexistuje.
+        /// </returns>
         [HttpGet("/media/avatar/{userId:int}")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Avatar(int userId)
@@ -43,7 +61,16 @@ namespace BDAS2_Flowers.Controllers.MediaControllers
             };
             return File(bytes, contentType);
         }
-        
+
+        /// <summary>
+        /// Vrátí hlavní obrázek produktu jako binární obsah.
+        /// Data čte z pohledu <c>VW_MEDIA_PRODUCT_MAIN</c>.
+        /// </summary>
+        /// <param name="productId">Identifikátor produktu, pro který se má hlavní obrázek načíst.</param>
+        /// <returns>
+        /// Binární obsah hlavního obrázku produktu s odpovídajícím MIME typem,
+        /// nebo <see cref="NotFoundResult"/>, pokud obrázek pro daný produkt neexistuje.
+        /// </returns>
         [HttpGet("/media/product/by-product/{productId:int}")]
         [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any, NoStore = false)]
         public async Task<IActionResult> ProductMainImage(int productId)

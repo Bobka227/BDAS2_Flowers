@@ -6,13 +6,26 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu způsobů doručení.
+/// Umožňuje jejich výpis, vytvoření, přejmenování a odstranění.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/delivery-methods")]
 public class AdminDeliveryMethodsController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminDeliveryMethodsController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminDeliveryMethodsController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech dostupných způsobů doručení.
+    /// </summary>
+    /// <returns>View s kolekcí dvojic identifikátor–název způsobu doručení.</returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -28,6 +41,11 @@ public class AdminDeliveryMethodsController : Controller
         return View("/Views/AdminPanel/DeliveryMethods/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří nový způsob doručení pomocí uložené procedury <c>PRC_DELIVERY_METHOD_CREATE</c>.
+    /// </summary>
+    /// <param name="name">Název nového způsobu doručení.</param>
+    /// <returns>Přesměrování zpět na seznam způsobů doručení.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
     public async Task<IActionResult> Create(string name)
@@ -50,6 +68,12 @@ public class AdminDeliveryMethodsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Přejmenuje existující způsob doručení pomocí uložené procedury <c>PRC_DELIVERY_METHOD_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor přejmenovávaného způsobu doručení.</param>
+    /// <param name="name">Nový název způsobu doručení.</param>
+    /// <returns>Přesměrování zpět na seznam způsobů doručení.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/rename")]
     public async Task<IActionResult> Rename(int id, string name)
@@ -67,6 +91,11 @@ public class AdminDeliveryMethodsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Odstraní vybraný způsob doručení pomocí uložené procedury <c>PRC_DELIVERY_METHOD_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor odstraňovaného způsobu doručení.</param>
+    /// <returns>Přesměrování zpět na seznam způsobů doručení.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]
     public async Task<IActionResult> Delete(int id)

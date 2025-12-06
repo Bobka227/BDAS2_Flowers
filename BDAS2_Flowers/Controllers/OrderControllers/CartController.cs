@@ -9,6 +9,12 @@ using System.Security.Claims;
 public class CartController : Controller
 {
     private readonly IConfiguration _cfg;
+
+    /// <summary>
+    /// Klíč pro uložení košíku v uživatelské session.
+    /// Pro přihlášeného uživatele používá formát <c>CART_USER_{userId}</c>,
+    /// pro anonymního uživatele <c>CART_ANON</c>.
+    /// </summary>
     private string CartKey
     {
         get
@@ -20,8 +26,18 @@ public class CartController : Controller
             return "CART_ANON";
         }
     }
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="CartController"/> s konfigurací aplikace.
+    /// </summary>
+    /// <param name="cfg">Konfigurace aplikace (používá se zejména connection string k databázi).</param>
     public CartController(IConfiguration cfg) => _cfg = cfg;
 
+    /// <summary>
+    /// Doplní položkám košíku chybějící data (název a cenu) z databázového pohledu <c>VW_PRODUCT_EDIT</c>
+    /// a uloží aktualizovaný košík zpět do session.
+    /// </summary>
+    /// <param name="cart">Model košíku, ve kterém mohou být některé položky neúplné.</param>
     private async Task HydrateAsync(CartVm cart)
     {
         var need = cart.Items.Where(i => i.UnitPrice <= 0m || string.IsNullOrWhiteSpace(i.Title)).ToList();
@@ -48,6 +64,11 @@ public class CartController : Controller
         HttpContext.Session.SetJson(CartKey, cart);
     }
 
+    /// <summary>
+    /// Zobrazí obsah košíku aktuálního uživatele.
+    /// V případě potřeby doplní chybějící informace o produktech z databáze.
+    /// </summary>
+    /// <returns>View s modelem <see cref="CartVm"/>.</returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -56,6 +77,16 @@ public class CartController : Controller
         return View(cart);
     }
 
+    /// <summary>
+    /// Přidá produkt do košíku nebo navýší množství, pokud už v košíku existuje.
+    /// Podporuje jak běžný POST, tak AJAX volání (vrací JSON odpověď).
+    /// </summary>
+    /// <param name="productId">Identifikátor přidávaného produktu.</param>
+    /// <param name="quantity">Počet kusů, které se mají přidat (výchozí 1).</param>
+    /// <returns>
+    /// Při AJAX volání JSON s výsledkem a počtem položek v košíku,
+    /// jinak přesměrování zpět na předchozí stránku nebo do katalogu.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("add")]
     public async Task<IActionResult> Add(int productId, int quantity = 1)
@@ -122,7 +153,11 @@ public class CartController : Controller
         return Redirect(Request.Headers["Referer"].ToString() ?? "/catalog");
     }
 
-
+    /// <summary>
+    /// Zvýší množství daného produktu v košíku o 1.
+    /// </summary>
+    /// <param name="productId">Identifikátor produktu, jehož množství se má navýšit.</param>
+    /// <returns>Přesměrování na stránku košíku.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("inc")]
     public IActionResult Inc(int productId)
@@ -134,6 +169,12 @@ public class CartController : Controller
         return Redirect("/cart");
     }
 
+    /// <summary>
+    /// Sníží množství daného produktu v košíku o 1.
+    /// Pokud množství klesne na nulu nebo méně, položka se z košíku odstraní.
+    /// </summary>
+    /// <param name="productId">Identifikátor produktu, jehož množství se má snížit.</param>
+    /// <returns>Přesměrování na stránku košíku.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("dec")]
     public IActionResult Dec(int productId)
@@ -149,6 +190,11 @@ public class CartController : Controller
         return Redirect("/cart");
     }
 
+    /// <summary>
+    /// Odstraní konkrétní produkt z košíku (bez ohledu na aktuální množství).
+    /// </summary>
+    /// <param name="productId">Identifikátor produktu, který se má z košíku odstranit.</param>
+    /// <returns>Přesměrování na stránku košíku.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("remove")]
     public IActionResult Remove(int productId)
@@ -159,6 +205,10 @@ public class CartController : Controller
         return Redirect("/cart");
     }
 
+    /// <summary>
+    /// Vyprázdní celý košík aktuálního uživatele odstraněním dat ze session.
+    /// </summary>
+    /// <returns>Přesměrování na stránku košíku.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("clear")]
     public IActionResult Clear()

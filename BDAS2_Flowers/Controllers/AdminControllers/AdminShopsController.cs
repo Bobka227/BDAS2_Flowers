@@ -6,13 +6,28 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu prodejen (poboček).
+/// Umožňuje zobrazit seznam prodejen a vytvářet, přejmenovávat a mazat prodejny.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/shops")]
 public class AdminShopsController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminShopsController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminShopsController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech prodejen načtený z pohledu <c>VW_SHOPS</c>.
+    /// </summary>
+    /// <returns>
+    /// View s kolekcí dvojic (Id, název prodejny) pro administrátorský přehled prodejen.
+    /// </returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -26,6 +41,15 @@ public class AdminShopsController : Controller
         return View("/Views/AdminPanel/Shops/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří novou prodejnu pomocí uložené procedury <c>PRC_SHOP_CREATE</c>.
+    /// Ověřuje formát telefonního čísla a požaduje jeho vyplnění.
+    /// </summary>
+    /// <param name="name">Název nové prodejny.</param>
+    /// <param name="phone">Telefonní číslo prodejny (povinné, pouze číslice jsou povoleny).</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam prodejen s chybovou nebo informační zprávou v <c>TempData</c>.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
     public async Task<IActionResult> Create(string name, string? phone)
@@ -62,6 +86,14 @@ public class AdminShopsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Přejmenuje existující prodejnu pomocí uložené procedury <c>PRC_SHOP_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor prodejny, která má být přejmenována.</param>
+    /// <param name="name">Nový název prodejny.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam prodejen s informační nebo chybovou zprávou.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("rename")]
     public async Task<IActionResult> Rename(int id, string name)
@@ -86,6 +118,14 @@ public class AdminShopsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže prodejnu pomocí uložené procedury <c>PRC_SHOP_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazané prodejny.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam prodejen s informační nebo chybovou zprávou
+    /// podle výsledku operace.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("delete")]
     public async Task<IActionResult> Delete(int id)

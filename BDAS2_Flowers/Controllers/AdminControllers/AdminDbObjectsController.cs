@@ -8,17 +8,29 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers
 {
+    /// <summary>
+    /// Administrátorský controller pro přehled a export databázových objektů.
+    /// Umožňuje zobrazit seznam objektů, načíst jejich zdrojový kód a stáhnout přehled do CSV.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     [Route("admin/db-objects")]
     public class AdminDbObjectsController : Controller
     {
         private readonly IDbFactory _db;
 
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="AdminDbObjectsController"/> s továrnou databázových připojení.
+        /// </summary>
+        /// <param name="db">Továrna pro vytváření databázových připojení.</param>
         public AdminDbObjectsController(IDbFactory db)
         {
             _db = db;
         }
 
+        /// <summary>
+        /// Načte seznam databázových objektů z pohledu <c>VW_DB_OBJECTS_ADMIN</c>.
+        /// </summary>
+        /// <returns>Seznam modelů <see cref="DbObjectRowVm"/> reprezentujících databázové objekty.</returns>
         private async Task<List<DbObjectRowVm>> LoadObjectsAsync()
         {
             var list = new List<DbObjectRowVm>();
@@ -53,6 +65,12 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return list;
         }
 
+        /// <summary>
+        /// Načte metadata a zdrojový text vybraného databázového objektu.
+        /// </summary>
+        /// <param name="type">Typ objektu (např. TABLE, VIEW, PACKAGE).</param>
+        /// <param name="name">Název objektu v databázi.</param>
+        /// <returns>Model <see cref="DbObjectSourceVm"/> se zdrojovým textem nebo <c>null</c>, pokud objekt neexistuje.</returns>
         private async Task<DbObjectSourceVm?> LoadSourceAsync(string type, string name)
         {
             if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(name))
@@ -105,7 +123,7 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
                 await using var r = await src.ExecuteReaderAsync();
                 while (await r.ReadAsync())
                 {
-                    sb.Append(r.GetString(1)); 
+                    sb.Append(r.GetString(1));
                 }
             }
 
@@ -113,6 +131,10 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return vm;
         }
 
+        /// <summary>
+        /// Zobrazí stránku s přehledem databázových objektů.
+        /// </summary>
+        /// <returns>View s modelem <see cref="DbObjectsVm"/> obsahujícím seznam objektů.</returns>
         [HttpGet("")]
         public async Task<IActionResult> Index()
         {
@@ -121,6 +143,16 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return View("~/Views/AdminPanel/DbObjects/Index.cshtml", vm);
         }
 
+        /// <summary>
+        /// Vrátí čistý zdrojový text daného databázového objektu.
+        /// Používá se např. pro zobrazení v prohlížeči nebo v náhledu.
+        /// </summary>
+        /// <param name="type">Typ objektu (např. VIEW, PACKAGE, PROCEDURE).</param>
+        /// <param name="name">Název objektu v databázi.</param>
+        /// <returns>
+        /// Obsah zdrojového kódu objektu jako <see cref="ContentResult"/>,
+        /// nebo <see cref="NotFoundResult"/>, pokud objekt neexistuje.
+        /// </returns>
         [HttpGet("source-text")]
         public async Task<IActionResult> SourceText(string type, string name)
         {
@@ -131,6 +163,10 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return Content(vm.SourceText, "text/plain; charset=utf-8");
         }
 
+        /// <summary>
+        /// Vygeneruje CSV soubor s přehledem databázových objektů a nabídne jej ke stažení.
+        /// </summary>
+        /// <returns>CSV soubor se seznamem objektů jako <see cref="FileContentResult"/>.</returns>
         [HttpGet("download")]
         public async Task<IActionResult> Download()
         {

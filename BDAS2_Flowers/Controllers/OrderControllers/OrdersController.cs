@@ -10,15 +10,27 @@ using Microsoft.Extensions.Logging;
 
 namespace BDAS2_Flowers.Controllers.OrderControllers
 {
+    /// <summary>
+    /// Controller pro vytváření a zobrazení objednávek zákazníků.
+    /// Zajišťuje validaci vstupu, volání PL/SQL procedur a integraci s platební službou.
+    /// </summary>
     [Authorize]
     public class OrdersController : Controller
     {
         private readonly IPaymentService _payments;
-
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="OrdersController"/> se službou plateb a továrnou DB připojení.
+        /// </summary>
+        /// <param name="db">Továrna databázových připojení pro práci s Oracle DB.</param>
+        /// <param name="payments">Služba pro vytváření a aktualizaci plateb (hotově / karta / kupón).</param>
         public OrdersController(IDbFactory db, IPaymentService payments)
         { _db = db; _payments = payments; }
 
+        /// <summary>
+        /// Klíč pro uložení košíku v session pro aktuálního uživatele (nebo anonymního).
+        /// </summary>
         private string CartKey
         {
             get
@@ -31,9 +43,18 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             }
         }
 
+        /// <summary>
+        /// Vrací číselné ID aktuálně přihlášeného uživatele.
+        /// Pokud jej nelze z claimů načíst, vrací 0.
+        /// </summary>
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
+        /// <summary>
+        /// Zobrazí formulář pro vytvoření nové objednávky.
+        /// Načte číselníky (doprava, prodejny, adresy, produkty) a předvyplní položky z košíku.
+        /// </summary>
+        /// <returns>View s modelem <see cref="OrderCreateVm"/>.</returns>
         [HttpGet("/orders/create")]
         public async Task<IActionResult> Create()
         {
@@ -78,12 +99,22 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             return View(vm);
         }
 
+        /// <summary>
+        /// Zpracuje odeslaný formulář pro vytvoření objednávky.
+        /// Provede validaci, vytvoří adresu, platbu, objednávku a položky a následně objednávku finalizuje.
+        /// </summary>
+        /// <param name="vm">ViewModel s údaji o objednávce a platebních údajích.</param>
+        /// <returns>
+        /// Při chybě vrací view s validací a aktuálními číselníky,
+        /// při úspěchu přesměruje na detail objednávky.
+        /// </returns>
         [ValidateAntiForgeryToken]
         [HttpPost("/orders/create")]
         public async Task<IActionResult> Create(OrderCreateVm vm)
         {
             var errors = new List<string>();
 
+            // Validace adresy
             if (vm.UseNewAddress)
             {
                 if (string.IsNullOrWhiteSpace(vm.Street) || vm.HouseNumber <= 0 || vm.PostalCode <= 0)
@@ -97,6 +128,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
 
             var pt = (vm.PaymentType ?? "").ToLowerInvariant();
 
+            // Validace platebních údajů
             if (pt == "card")
             {
                 if (string.IsNullOrWhiteSpace(vm.CardNumber) || vm.CardNumber.Count(char.IsDigit) < 12)
@@ -113,6 +145,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     errors.Add("Zadejte kód kupónu.");
             }
 
+            // Validace položek objednávky
             if (vm.Items == null || vm.Items.Count == 0 ||
                 vm.Items.Any(i => i.ProductId <= 0 || i.Quantity <= 0))
             {
@@ -148,6 +181,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 var pendingId = await GetPendingStatusIdAsync(con);
                 var rawType = pt;
 
+                // Vytvoření záznamu platby
                 var paymentId = await _payments.CreatePaymentAsync(con, tx, CurrentUserId, rawType);
 
                 if (rawType == "card" && !string.IsNullOrWhiteSpace(vm.CardNumber))
@@ -159,6 +193,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     await _payments.AttachCashAsync(con, tx, paymentId, vm.CashAccepted ?? 0m);
                 }
 
+                // Rozhodnutí, zda použít novou nebo existující adresu
                 int addressId;
                 var wantsNewAddress =
                     vm.UseNewAddress ||
@@ -185,6 +220,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     addressId = vm.AddressId!.Value;
                 }
 
+                // Vytvoření hlavičky objednávky
                 int orderId;
                 await using (var cmd = new OracleCommand("PRC_CREATE_ORDER", con)
                 { CommandType = CommandType.StoredProcedure, Transaction = tx })
@@ -202,6 +238,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     orderId = Convert.ToInt32(o.Value.ToString());
                 }
 
+                // Vložení položek objednávky
                 foreach (var it in vm.Items)
                 {
                     await using var cmd = new OracleCommand("PRC_ADD_ITEM", con)
@@ -212,6 +249,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
+                // Přepočet a finalizace objednávky
                 await using (var cmd = new OracleCommand("PRC_FINALIZE_ORDER_XCUR", con)
                 { CommandType = CommandType.StoredProcedure, Transaction = tx })
                 {
@@ -219,6 +257,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
+                // Zpracování kupónu (pokud je použit)
                 if (rawType == "cupon" && !string.IsNullOrWhiteSpace(vm.CuponCode))
                 {
                     var status = await ApplyCouponAsync(con, tx, paymentId, vm.CuponCode!);
@@ -250,6 +289,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                     }
                 }
 
+                // Kontrola a výpočet vrácené hotovosti
                 if (rawType == "cash")
                 {
                     var amount = await _payments.GetAmountAsync(con, tx, paymentId);
@@ -311,13 +351,19 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
 
         }
 
+        /// <summary>
+        /// Zobrazí detail konkrétní objednávky včetně platebních údajů a seznamu položek.
+        /// </summary>
+        /// <param name="id">Interní identifikátor objednávky (ORDERID).</param>
+        /// <returns>View s modelem <see cref="OrderDetailsVm"/> nebo 404, pokud objednávka neexistuje.</returns>
         [HttpGet("/orders/{id:int}")]
         public async Task<IActionResult> Details(int id)
         {
-            await using var con = await _db.CreateOpenAsync();  
+            await using var con = await _db.CreateOpenAsync();
 
             var model = new OrderDetailsVm();
 
+            // Hlavička objednávky
             await using (var cmd = new OracleCommand(@"
                 SELECT ORDER_NO, ORDERDATE, CUSTOMER, STATUS, DELIVERY, SHOP, TOTAL
                 FROM VW_ORDER_DETAILS
@@ -336,6 +382,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 model.Total = rd.GetDecimal(6);
             }
 
+            // Platební informace
             await using (var cmd = new OracleCommand(@"
             SELECT PAYMENTTYPE, AMOUNT, CARD_LAST4, CASH_ACCEPTED, CASH_RETURNED, CUPON_BONUS, CUPON_EXPIRY
             FROM VW_ORDER_PAYMENT
@@ -355,6 +402,7 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
                 }
             }
 
+            // Položky objednávky
             model.Items = new List<OrderItemDetailsVm>();
             await using (var cmd = new OracleCommand(@"
                 SELECT productid, product_name, quantity, unitprice, line_total
@@ -380,6 +428,12 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             return View(model);
         }
 
+        /// <summary>
+        /// Načte ID statusu s názvem <c>PENDING</c> z pohledu <c>VW_STATUSES</c>.
+        /// </summary>
+        /// <param name="con">Otevřené připojení k databázi Oracle.</param>
+        /// <returns>ID statusu PENDING.</returns>
+        /// <exception cref="InvalidOperationException">Vyhozeno, pokud není PENDING status v číselníku nalezen.</exception>
         private async Task<int> GetPendingStatusIdAsync(OracleConnection con)
         {
             await using var cmd = new OracleCommand(
@@ -390,9 +444,15 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             throw new InvalidOperationException("Tabulka STATUS je prázdná – doplňte číselník stavů.");
         }
 
+        /// <summary>
+        /// Pomocná metoda pro načtení dvojic ID–Name z databáze pomocí zadaného SQL dotazu.
+        /// Používá se pro naplnění dropdownů (doprava, prodejny, adresy, produkty).
+        /// </summary>
+        /// <param name="sql">SQL dotaz, který vrací minimálně dva sloupce (ID, Name).</param>
+        /// <returns>Seznam dvojic <see cref="IdNameVm"/>.</returns>
         private async Task<List<IdNameVm>> LoadIdNameAsync(string sql)
         {
-            await using var con = await _db.CreateOpenAsync();   
+            await using var con = await _db.CreateOpenAsync();
             var list = new List<IdNameVm>();
             await using var cmd = new OracleCommand(sql, con);
             await using var rd = await cmd.ExecuteReaderAsync();
@@ -401,7 +461,17 @@ namespace BDAS2_Flowers.Controllers.OrderControllers
             return list;
         }
 
-        private async Task<int> ApplyCouponAsync( OracleConnection con, OracleTransaction tx, int paymentId, string code)
+        /// <summary>
+        /// Aplikuje slevový kupón k dané platbě pomocí uložené procedury <c>PRC_COUPON_APPLY</c>.
+        /// </summary>
+        /// <param name="con">Otevřené připojení k databázi.</param>
+        /// <param name="tx">Probíhající databázová transakce.</param>
+        /// <param name="paymentId">Identifikátor platby, ke které se kupón vztahuje.</param>
+        /// <param name="code">Textový kód kupónu zadaný uživatelem.</param>
+        /// <returns>
+        /// Číselný status operace (0 = úspěch, jiné hodnoty značí chybu – neexistující/propadlý kupón apod.).
+        /// </returns>
+        private async Task<int> ApplyCouponAsync(OracleConnection con, OracleTransaction tx, int paymentId, string code)
         {
             await using var cmd = new OracleCommand("PRC_COUPON_APPLY", con)
             {

@@ -8,13 +8,27 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu plateb.
+/// Umožňuje zobrazit seznam plateb, vytvářet nové platby, upravovat existující
+/// a mazat je pomocí uložených procedur v databázi.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/payments")]
 public class AdminPaymentsController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminPaymentsController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminPaymentsController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech plateb v systému.
+    /// </summary>
+    /// <returns>View s kolekcí <see cref="AdminPaymentRowVm"/> pro administrátorský přehled plateb.</returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -55,6 +69,10 @@ public class AdminPaymentsController : Controller
         return View("/Views/AdminPanel/Payments/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Zobrazí formulář pro vytvoření nové platby.
+    /// </summary>
+    /// <returns>View s prázdným modelem <see cref="AdminPaymentEditVm"/> předvyplněným dnešním datem platby.</returns>
     [HttpGet("create")]
     public IActionResult Create()
     {
@@ -62,6 +80,14 @@ public class AdminPaymentsController : Controller
         return View("/Views/AdminPanel/Payments/Edit.cshtml", vm);
     }
 
+    /// <summary>
+    /// Vytvoří novou platbu pomocí uložené procedury <c>PRC_PAYMENT_CREATE</c>.
+    /// </summary>
+    /// <param name="vm">Model obsahující údaje nové platby.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam plateb,
+    /// při chybné validaci znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AdminPaymentEditVm vm)
@@ -85,7 +111,14 @@ public class AdminPaymentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    /// <summary>
+    /// Zobrazí formulář pro úpravu existující platby.
+    /// </summary>
+    /// <param name="id">Identifikátor upravované platby.</param>
+    /// <returns>
+    /// View s vyplněným modelem <see cref="AdminPaymentEditVm"/>,
+    /// nebo <see cref="NotFoundResult"/>, pokud platba neexistuje.
+    /// </returns>
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -108,16 +141,24 @@ public class AdminPaymentsController : Controller
             if (!await r.ReadAsync())
                 return NotFound();
 
-            vm.Id = DbRead.GetInt32(r, 0);   
-            vm.PayDate = r.GetDateTime(1);         
-            vm.Amount = (decimal)r.GetDecimal(2); 
-            vm.MethodCode = r.GetString(3);        
+            vm.Id = DbRead.GetInt32(r, 0);
+            vm.PayDate = r.GetDateTime(1);
+            vm.Amount = (decimal)r.GetDecimal(2);
+            vm.MethodCode = r.GetString(3);
         }
 
         return View("/Views/AdminPanel/Payments/Edit.cshtml", vm);
     }
 
-
+    /// <summary>
+    /// Uloží změny existující platby pomocí uložené procedury <c>PRC_PAYMENT_UPDATE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor platby z URL.</param>
+    /// <param name="vm">Model s upravenými údaji platby.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam plateb,
+    /// při chybné validaci znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, AdminPaymentEditVm vm)
@@ -145,6 +186,14 @@ public class AdminPaymentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže platbu pomocí uložené procedury <c>PRC_PAYMENT_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáné platby.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam plateb s informační zprávou
+    /// o úspěchu nebo chybě operace.
+    /// </returns>
     [HttpPost("delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)

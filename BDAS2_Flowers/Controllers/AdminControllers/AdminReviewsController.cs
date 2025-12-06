@@ -9,13 +9,28 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers
 {
+    /// <summary>
+    /// Administrátorský controller pro správu uživatelských recenzí.
+    /// Umožňuje recenze zobrazit a mazat pomocí uložené procedury v databázi.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     [Route("admin/reviews")]
     public class AdminReviewsController : Controller
     {
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="AdminReviewsController"/> s továrnou databázových připojení.
+        /// </summary>
+        /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
         public AdminReviewsController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Zobrazí seznam všech recenzí z pohledu <c>VW_REVIEWS</c>.
+        /// </summary>
+        /// <returns>
+        /// View s kolekcí <see cref="AdminReviewRowVm"/> pro administrátorský přehled recenzí.
+        /// </returns>
         // GET /admin/reviews
         [HttpGet("")]
         public async Task<IActionResult> Index()
@@ -52,6 +67,14 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return View("/Views/AdminPanel/Reviews/Index.cshtml", rows);
         }
 
+        /// <summary>
+        /// Smaže recenzi podle jejího ID pomocí uložené procedury <c>ST72861.PRC_REVIEW_DELETE</c>.
+        /// </summary>
+        /// <param name="id">Identifikátor mazané recenze.</param>
+        /// <returns>
+        /// Přesměrování zpět na seznam recenzí s informační zprávou
+        /// o úspěchu nebo chybě operace.
+        /// </returns>
         // POST /admin/reviews/delete/123
         [HttpPost("delete/{id:int}")]
         [ValidateAntiForgeryToken]

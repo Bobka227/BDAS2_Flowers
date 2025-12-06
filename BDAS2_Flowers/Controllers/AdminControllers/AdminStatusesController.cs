@@ -6,13 +6,28 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu stavů objednávek.
+/// Umožňuje statusy vypisovat, vytvářet, přejmenovávat a mazat.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/statuses")]
 public class AdminStatusesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminStatusesController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminStatusesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech statusů objednávek.
+    /// </summary>
+    /// <returns>
+    /// View s kolekcí dvojic (Id, název statusu) načtenou z pohledu <c>VW_ADMIN_STATUSES</c>.
+    /// </returns>
     // GET /admin/statuses
     [HttpGet("")]
     public async Task<IActionResult> Index()
@@ -29,6 +44,13 @@ public class AdminStatusesController : Controller
         return View("/Views/AdminPanel/Statuses/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří nový status objednávky pomocí uložené procedury <c>PRC_STATUS_CREATE</c>.
+    /// </summary>
+    /// <param name="name">Název nového statusu.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam statusů s informační zprávou o úspěchu nebo chybě.
+    /// </returns>
     // POST /admin/statuses/create
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
@@ -59,6 +81,14 @@ public class AdminStatusesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Přejmenuje existující status objednávky pomocí uložené procedury <c>PRC_STATUS_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor upravovaného statusu.</param>
+    /// <param name="name">Nový název statusu.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam statusů s informační zprávou o výsledku operace.
+    /// </returns>
     // POST /admin/statuses/{id}/rename
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/rename")]
@@ -84,6 +114,14 @@ public class AdminStatusesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže status objednávky pomocí uložené procedury <c>PRC_STATUS_DELETE</c>.
+    /// Pokud je status používán v objednávkách, bude smazání odmítnuto.
+    /// </summary>
+    /// <param name="id">Identifikátor mazaného statusu.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam statusů s informační zprávou o úspěchu nebo chybě.
+    /// </returns>
     // POST /admin/statuses/{id}/delete
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]
