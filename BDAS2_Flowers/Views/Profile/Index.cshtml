@@ -96,7 +96,24 @@
 
                             <dt class="col-sm-3">Role</dt>
                             <dd class="col-sm-9">@Model.Role</dd>
+
+                            <dt class="col-sm-3">Segment</dt>
+                            <dd class="col-sm-9">
+                                @{
+                                    var segClass = (Model.Segment ?? "NEW").ToUpperInvariant() switch
+                                    {
+                                        "NEW" => "badge bg-primary",
+                                        "BRONZE" => "badge bg-warning text-dark",
+                                        "SILVER" => "badge bg-secondary",
+                                        "GOLD" => "badge bg-warning text-dark",
+                                        "INACTIVE" => "badge bg-dark",
+                                        _ => "badge bg-light text-dark"
+                                    };
+                                }
+                                <span class="@segClass">@Model.Segment</span>
+                            </dd>
                         </dl>
+
                     </div>
                 </div>
             </div>

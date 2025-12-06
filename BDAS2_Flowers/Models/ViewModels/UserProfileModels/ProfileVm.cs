@@ -25,6 +25,7 @@
         public string FullName { get; set; } = "";
         public string Email { get; set; } = "";
         public string Role { get; set; } = "";
+        public string Segment { get; set; } = "";   
 
         public List<ProfileOrderRowVm> Orders { get; set; } = new();
         public List<ProfileAddressVm> Addresses { get; set; } = new(); 
