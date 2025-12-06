@@ -53,7 +53,9 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             };
 
             await using var con = await _db.CreateOpenAsync();
-
+            /// Načtení zákaznického segmentu aktuálního uživatele,
+            /// volá funkci FN_USER_SEGMENT. Výsledek je vrácen přes
+            /// výstupní parametr :p_result a uložen do vlastnosti vm.Segment.
             await using (var cmdSeg = new OracleCommand(
                 "BEGIN :p_result := ST72861.FN_USER_SEGMENT(:p_user_id); END;",
                 con))
