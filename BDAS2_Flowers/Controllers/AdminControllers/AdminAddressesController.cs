@@ -6,13 +6,27 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu adres (CRUD operace nad adresami).
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/addresses")]
 public class AdminAddressesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminAddressesController"/> s továrnou na databázová připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření otevřených databázových připojení.</param>
     public AdminAddressesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam adres s možností filtrování podle ulice a PSČ.
+    /// </summary>
+    /// <param name="qStreet">Část názvu ulice pro fulltextové filtrování (nepovinné).</param>
+    /// <param name="qPostal">PSČ pro přesné filtrování (nepovinné).</param>
+    /// <returns>View se seznamem adres pro administraci.</returns>
     // GET /admin/addresses
     [HttpGet("")]
     public async Task<IActionResult> Index(string? qStreet, int? qPostal)
@@ -54,6 +68,13 @@ public class AdminAddressesController : Controller
         return View("/Views/AdminPanel/Addresses/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří novou adresu pomocí uložené procedury <c>PRC_CREATE_ADDRESS</c>.
+    /// </summary>
+    /// <param name="postalcode">PSČ nové adresy.</param>
+    /// <param name="street">Název ulice nové adresy.</param>
+    /// <param name="housenumber">Číslo domu nové adresy.</param>
+    /// <returns>Přesměrování zpět na seznam adres.</returns>
     // POST /admin/addresses/create
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
@@ -76,6 +97,14 @@ public class AdminAddressesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Aktualizuje existující adresu pomocí uložené procedury <c>PRC_ADDRESS_UPDATE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor upravované adresy.</param>
+    /// <param name="postalcode">Nové PSČ adresy.</param>
+    /// <param name="street">Nový název ulice.</param>
+    /// <param name="housenumber">Nové číslo domu.</param>
+    /// <returns>Přesměrování zpět na seznam adres se zachováním filtrů.</returns>
     // POST /admin/addresses/{id}/update
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/update")]
@@ -107,7 +136,11 @@ public class AdminAddressesController : Controller
         return RedirectToAction(nameof(Index), new { qStreet = Request.Query["qStreet"], qPostal = Request.Query["qPostal"] });
     }
 
-    // POST /admin/addresses/{id}/delete
+    /// <summary>
+    /// Odstraní existující adresu pomocí uložené procedury <c>PRC_ADDRESS_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor odstraňované adresy.</param>
+    /// <returns>Přesměrování zpět na seznam adres se zachováním filtrů.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]
     public async Task<IActionResult> Delete(int id)

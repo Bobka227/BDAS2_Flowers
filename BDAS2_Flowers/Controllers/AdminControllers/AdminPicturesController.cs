@@ -7,13 +7,33 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu obrázků produktů.
+/// Umožňuje obrázky filtrovat, zobrazit, nahrávat, aktualizovat jejich metadata a mazat.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/pictures")]
 public class AdminPicturesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminPicturesController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminPicturesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí přehled obrázků s možností filtrování podle názvu souboru, přípony a názvu produktu.
+    /// Také naplní pomocné seznamy produktů a dostupných přípon pro filtraci.
+    /// </summary>
+    /// <param name="qName">Část názvu souboru obrázku (filtr, nepovinné).</param>
+    /// <param name="qExt">Přípona souboru (např. JPG, PNG; filtr, nepovinné).</param>
+    /// <param name="qProduct">Část názvu produktu, ke kterému je obrázek přiřazen (filtr, nepovinné).</param>
+    /// <returns>
+    /// View s kolekcí řádků obsahujících metadata obrázků
+    /// a pomocnými daty v <c>ViewBag.Products</c>, <c>ViewBag.Exts</c> a <c>ViewBag.Filters</c>.
+    /// </returns>
     [HttpGet("")]
     public async Task<IActionResult> Index(string? qName, string? qExt, string? qProduct)
     {
@@ -67,7 +87,7 @@ public class AdminPicturesController : Controller
             }
         }
 
-     
+        // Seznam produktů pro výběr při přiřazování obrázku
         await using (var cmd2 = con.CreateCommand())
         {
             cmd2.CommandText = @"
@@ -82,7 +102,7 @@ public class AdminPicturesController : Controller
             }
         }
 
-
+        // Seznam povolených přípon obrázků
         await using (var cmd3 = con.CreateCommand())
         {
             cmd3.CommandText = @"SELECT DISTINCT UPPER(EXTENTION) FROM PICTURE_FORMAT ORDER BY 1";
@@ -97,6 +117,14 @@ public class AdminPicturesController : Controller
         return View("/Views/AdminPanel/Pictures/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vrátí binární obsah obrázku podle jeho ID.
+    /// Používá se pro zobrazování náhledu obrázků v administraci.
+    /// </summary>
+    /// <param name="id">Identifikátor obrázku (<c>PICTUREID</c>).</param>
+    /// <returns>
+    /// Soubor s příslušným MIME typem nebo <see cref="NotFoundResult"/>, pokud obrázek neexistuje.
+    /// </returns>
     [HttpGet("{id:int}/content")]
     public async Task<IActionResult> Content(int id)
     {
@@ -129,6 +157,14 @@ public class AdminPicturesController : Controller
         return File(bytes, mime);
     }
 
+    /// <summary>
+    /// Nahraje nový obrázek produktu nebo aktualizuje stávající
+    /// pomocí uložené procedury <c>PRC_SET_PRODUCT_PICTURE</c>.
+    /// </summary>
+    /// <param name="productId">Identifikátor produktu, ke kterému má být obrázek přiřazen.</param>
+    /// <param name="name">Volitelný název souboru; pokud není zadán, použije se původní název souboru.</param>
+    /// <param name="file">Nahraný soubor s obrázkem.</param>
+    /// <returns>Přesměrování zpět na přehled obrázků s informační zprávou.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("upload")]
     public async Task<IActionResult> Upload(int productId, string? name, IFormFile file)
@@ -173,6 +209,11 @@ public class AdminPicturesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže obrázek produktu pomocí uložené procedury <c>PRC_DELETE_PRODUCT_PICTURE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáného obrázku (<c>PICTUREID</c>).</param>
+    /// <returns>Přesměrování zpět na přehled obrázků s výslednou zprávou.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]
     public async Task<IActionResult> Delete(int id)
@@ -196,6 +237,16 @@ public class AdminPicturesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Aktualizuje metadata obrázku (přiřazený produkt a název)
+    /// pomocí uložené procedury <c>PRC_PICTURE_UPDATE_META</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor obrázku (<c>PICTUREID</c>), jehož metadata se mění.</param>
+    /// <param name="productId">Nový identifikátor produktu, ke kterému má být obrázek přiřazen.</param>
+    /// <param name="name">Nový název obrázku.</param>
+    /// <returns>
+    /// Přesměrování zpět na přehled obrázků s ponecháním původních query parametrů filtru.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/update")]
     public async Task<IActionResult> UpdateMeta(int id, int productId, string name)

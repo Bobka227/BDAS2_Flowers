@@ -6,14 +6,35 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro změnu stavu objednávek.
+/// Umožňuje měnit status konkrétní objednávky pomocí uložené procedury v databázi.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/orders")]
 public class AdminOrdersStatusController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminOrdersStatusController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminOrdersStatusController(IDbFactory db) => _db = db;
 
-    // POST /admin/orders/{orderNo}/status
+    /// <summary>
+    /// Změní stav objednávky na zadaný status pomocí uložené procedury <c>PRC_CHANGE_ORDER_STATUS_UI</c>.
+    /// </summary>
+    /// <param name="orderNo">Veřejné číslo objednávky, jejíž stav se má změnit.</param>
+    /// <param name="statusName">Nový název stavu objednávky.</param>
+    /// <param name="returnEmail">
+    /// E-mail zákazníka použitý pro návratovou URL
+    /// (<c>/admin/users/{returnEmail}/orders</c>).
+    /// </param>
+    /// <returns>
+    /// Přesměrování na přehled objednávek daného uživatele s informační zprávou
+    /// o úspěchu nebo neúspěchu operace.
+    /// </returns>
     [ValidateAntiForgeryToken]
     [HttpPost("{orderNo}/status")]
     public async Task<IActionResult> ChangeOrderStatus(string orderNo, string statusName, string returnEmail)

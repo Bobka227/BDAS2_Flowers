@@ -7,12 +7,30 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.ProductControllers
 {
+    /// <summary>
+    /// Řadič zákaznického katalogu produktů.
+    /// Umožňuje přihlášeným uživatelům prohlížet nabídku, filtrovat podle typu
+    /// a fulltextově vyhledávat v názvu a podnázvu produktů.
+    /// </summary>
     [Authorize]
     public class CatalogController : Controller
     {
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Vytvoří instanci řadiče katalogu s přístupem do databáze.
+        /// </summary>
+        /// <param name="db">Továrna na databázová připojení.</param>
         public CatalogController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Zobrazí stránkovaný seznam produktů katalogu s možností filtrování
+        /// podle typu produktu a fulltextového vyhledávání.
+        /// </summary>
+        /// <param name="page">Index stránky (1 = první stránka).</param>
+        /// <param name="typeId">Volitelný filtr podle ID typu produktu.</param>
+        /// <param name="q">Volitelný textový dotaz pro vyhledávání v názvu a podnázvu.</param>
+        /// <returns>HTML stránka s kartami produktů aktuální stránky.</returns>
         public async Task<IActionResult> Index(int page = 1, int? typeId = null, string? q = null)
         {
             const int pageSize = 8;
@@ -35,7 +53,7 @@ namespace BDAS2_Flowers.Controllers.ProductControllers
             }
             ViewBag.Categories = categories;
             ViewBag.SelectedTypeId = typeId;
-            ViewBag.Search = q; 
+            ViewBag.Search = q;
 
             await using var cmd = conn.CreateCommand();
             cmd.BindByName = true;

@@ -6,13 +6,28 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu typů událostí.
+/// Umožňuje typy událostí zobrazit, vytvářet, upravovat a mazat.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/event-types")]
 public class AdminEventTypesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminEventTypesController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminEventTypesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech typů událostí.
+    /// </summary>
+    /// <returns>
+    /// View s kolekcí řádků (Id, název, popis) pro jednotlivé typy událostí.
+    /// </returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -27,6 +42,12 @@ public class AdminEventTypesController : Controller
         return View("/Views/AdminPanel/EventTypes/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří nový typ události pomocí uložené procedury <c>PRC_EVENT_TYPE_CREATE</c>.
+    /// </summary>
+    /// <param name="name">Název nového typu události.</param>
+    /// <param name="description">Popis typu události (nepovinný).</param>
+    /// <returns>Přesměrování zpět na seznam typů událostí.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
     public async Task<IActionResult> Create(string name, string? description)
@@ -48,6 +69,13 @@ public class AdminEventTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Upraví existující typ události (název a popis) pomocí uložené procedury <c>PRC_EVENT_TYPE_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor upravovaného typu události.</param>
+    /// <param name="name">Nový název typu události.</param>
+    /// <param name="description">Nový popis typu události (nepovinný).</param>
+    /// <returns>Přesměrování zpět na seznam typů událostí.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("rename")]
     public async Task<IActionResult> Rename(int id, string name, string? description)
@@ -65,6 +93,11 @@ public class AdminEventTypesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže existující typ události pomocí uložené procedury <c>PRC_EVENT_TYPE_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáného typu události.</param>
+    /// <returns>Přesměrování zpět na seznam typů událostí s výslednou zprávou.</returns>
     [ValidateAntiForgeryToken]
     [HttpPost("delete")]
     public async Task<IActionResult> Delete(int id)

@@ -9,15 +9,35 @@ using BDAS2_Flowers.Models.ViewModels.EventModels;
 
 namespace BDAS2_Flowers.Controllers.EventControllers
 {
+    /// <summary>
+    /// Controller pro zadání a vytvoření objednávky na akci (event).
+    /// Zajišťuje výběr typu akce, služeb, adresy a vytvoření objednávky včetně položek.
+    /// </summary>
     [Authorize]
     public class OrderEventController : Controller
     {
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="OrderEventController"/> s továrnou databázových připojení.
+        /// </summary>
+        /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
         public OrderEventController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Vrací ID aktuálně přihlášeného uživatele z claimu <see cref="ClaimTypes.NameIdentifier"/>.
+        /// Pokud se ID nepodaří převést, vrací 0.
+        /// </summary>
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
+        /// <summary>
+        /// Pomocná metoda pro bezpečnou konverzi objektu na <see cref="int"/>,
+        /// podporuje různé typy (OracleDecimal, int, long, decimal, string).
+        /// </summary>
+        /// <param name="v">Hodnota načtená z databáze.</param>
+        /// <returns>Celé číslo reprezentující ID.</returns>
+        /// <exception cref="InvalidOperationException">Pokud je hodnota <c>null</c> nebo <see cref="DBNull"/>.</exception>
         private static int AsInt(object v)
         {
             if (v is null || v is DBNull) throw new InvalidOperationException("Očekáváno číselné ID, ale je NULL.");
@@ -29,6 +49,12 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             return Convert.ToInt32(v.ToString());
         }
 
+        /// <summary>
+        /// Načte dvojice (Id, Název) z předaného <see cref="IDataReader"/> a vrátí je jako kolekci.
+        /// Očekává se, že první sloupec je ID a druhý sloupec je název.
+        /// </summary>
+        /// <param name="rd">Otevřený data reader.</param>
+        /// <returns>Seznam dvojic (Id, Název).</returns>
         private static List<(int Id, string Name)> ReadIdName(IDataReader rd)
         {
             var list = new List<(int, string)>();
@@ -41,6 +67,12 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             return list;
         }
 
+        /// <summary>
+        /// Získá ID aktuálního uživatele. Pokud není k dispozici v claimu,
+        /// dohledá ho podle e-mailu uživatele ve <c>VW_USERS_SECURITY</c>.
+        /// </summary>
+        /// <returns>Číselné ID uživatele.</returns>
+        /// <exception cref="InvalidOperationException">Pokud nelze zjistit e-mail přihlášeného uživatele.</exception>
         private async Task<int> GetCurrentUserIdAsync()
         {
             if (CurrentUserId > 0) return CurrentUserId;
@@ -65,6 +97,14 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             return AsInt(res);
         }
 
+        /// <summary>
+        /// Získá ID způsobu doručení podle názvu z pohledu <c>VW_DELIVERY_METHODS</c>.
+        /// Pokud neexistuje, vytvoří nový záznam pomocí procedury <c>ST72861.PRC_DELIVERY_METHOD_CREATE</c>.
+        /// </summary>
+        /// <param name="con">Otevřené připojení k databázi.</param>
+        /// <param name="tx">Aktuální databázová transakce.</param>
+        /// <param name="name">Název způsobu doručení.</param>
+        /// <returns>ID existujícího nebo nově vytvořeného způsobu doručení.</returns>
         private static async Task<int> GetOrCreateDeliveryMethodId(OracleConnection con, OracleTransaction tx, string name)
         {
             await using (var find = con.CreateCommand())
@@ -102,6 +142,17 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             }
         }
 
+        /// <summary>
+        /// Najde produkt reprezentující organizační poplatek akce
+        /// (název <c>Organizace akce (poplatek)</c>) a vrátí jeho ID.
+        /// </summary>
+        /// <param name="con">Otevřené připojení k databázi.</param>
+        /// <param name="eventTypeId">ID typu akce (momentálně se v dotazu nepoužívá).</param>
+        /// <param name="tx">Aktuální databázová transakce.</param>
+        /// <returns>ID produktu pro organizační poplatek.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Pokud produkt s názvem <c>Organizace akce (poplatek)</c> neexistuje.
+        /// </exception>
         private static async Task<int> ResolveEventOrganizationProductId(
             OracleConnection con, int eventTypeId, OracleTransaction tx)
         {
@@ -123,6 +174,11 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 "Vytvoř ho v katalogu produktů a nastav správně, jinak nelze objednávku akce dokončit.");
         }
 
+        /// <summary>
+        /// Zobrazí formulář pro objednání akce daného typu včetně seznamu prodejen a nabízených služeb.
+        /// </summary>
+        /// <param name="eventTypeId">ID typu akce, pro kterou se objednávka vytváří.</param>
+        /// <returns>View <c>OrderForm</c> s naplněným modelem <see cref="EventOrderVm"/>.</returns>
         [HttpGet]
         public async Task<IActionResult> OrderForm(int eventTypeId)
         {
@@ -138,6 +194,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             await using var con = (OracleConnection)await _db.CreateOpenAsync();
 
+            // Prodejny
             await using (var cmd = con.CreateCommand())
             {
                 cmd.CommandText = "SELECT ID, NAME FROM VW_SHOPS ORDER BY NAME";
@@ -145,6 +202,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 vm.Shops = ReadIdName(rd);
             }
 
+            // Nabídka služeb pro akce
             await using (var cmd = con.CreateCommand())
             {
                 cmd.BindByName = true;
@@ -177,6 +235,16 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             return View("OrderForm", vm);
         }
 
+        /// <summary>
+        /// Zpracuje odeslaný formulář pro objednávku akce.
+        /// Provede validaci, založí adresu, vytvoří objednávku, přidá položky
+        /// a provede finalizaci objednávky v rámci jedné transakce.
+        /// </summary>
+        /// <param name="m">Model s údaji z formuláře pro objednávku akce.</param>
+        /// <returns>
+        /// V případě úspěchu přesměrování na <see cref="EventOrderSuccess"/>,
+        /// jinak zobrazení formuláře s chybami.
+        /// </returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Order(EventOrderVm m)
@@ -184,6 +252,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             var userId = await GetCurrentUserIdAsync();
             m.Quantity = 1;
 
+            // Základní validace adresy a prodejny
             if (string.IsNullOrWhiteSpace(m.Street))
                 ModelState.AddModelError(nameof(m.Street), "Ulice je povinná.");
             if (m.HouseNumber is null)
@@ -195,6 +264,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             if (!ModelState.IsValid)
             {
+                // Při chybách je potřeba znovu naplnit lookupy (prodejny, služby)
                 await using var reload = (OracleConnection)await _db.CreateOpenAsync();
 
                 await using (var cmd = reload.CreateCommand())
@@ -239,6 +309,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
 
             try
             {
+                // 1) Vytvoření adresy
                 int addressId;
                 await using (var cmdAddr = con.CreateCommand())
                 {
@@ -258,12 +329,14 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     addressId = AsInt(o.Value);
                 }
 
+                // 2) Způsob doručení a základní produkt
                 var deliveryMethodId = await GetOrCreateDeliveryMethodId(
                     con, (OracleTransaction)tx, "On-site Event");
 
                 var baseProductId = await ResolveEventOrganizationProductId(
                     con, m.EventTypeId, (OracleTransaction)tx);
 
+                // 3) Vytvoření objednávky
                 string? orderNo;
                 await using (var cmd = con.CreateCommand())
                 {
@@ -301,6 +374,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 if (string.IsNullOrWhiteSpace(orderNo))
                     throw new InvalidOperationException("Nepodařilo se získat kód objednávky.");
 
+                // 4) Získání interního ID objednávky
                 int orderId;
                 await using (var cmdOrderId = con.CreateCommand())
                 {
@@ -315,6 +389,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 if (orderId <= 0)
                     throw new InvalidOperationException("Neplatné interní ID objednávky.");
 
+                // 5) Přidání základní položky objednávky (organizační poplatek)
                 await using (var cmdBase = new OracleCommand("ST72861.PRC_ADD_ITEM", con))
                 {
                     cmdBase.Transaction = (OracleTransaction)tx;
@@ -328,6 +403,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     await cmdBase.ExecuteNonQueryAsync();
                 }
 
+                // 6) Přidání vybraných doplňkových služeb
                 var selectedProducts = (m.Products ?? new List<EventProductChoiceVm>())
                     .Where(p => p.Quantity > 0)
                     .ToList();
@@ -350,6 +426,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                     }
                 }
 
+                // 7) Finální přepočet objednávky
                 await using (var cmdRecalc = new OracleCommand("ST72861.PRC_FINALIZE_ORDER_XCUR", con))
                 {
                     cmdRecalc.Transaction = (OracleTransaction)tx;
@@ -367,6 +444,7 @@ namespace BDAS2_Flowers.Controllers.EventControllers
                 await tx.RollbackAsync();
                 ModelState.AddModelError("", "Chyba: " + ex.Message);
 
+                // Při chybě je opět nutné naplnit lookupy, aby se formulář dal znovu zobrazit
                 await using var reload = (OracleConnection)await _db.CreateOpenAsync();
 
                 await using (var cmd = reload.CreateCommand())
@@ -407,12 +485,17 @@ namespace BDAS2_Flowers.Controllers.EventControllers
             }
         }
 
+        /// <summary>
+        /// Zobrazí stránku s potvrzením objednávky akce.
+        /// Využívá hodnoty uložené v <see cref="TempData"/> (číslo objednávky, ID typu akce).
+        /// </summary>
+        /// <returns>View s informací o úspěšném vytvoření objednávky.</returns>
         [HttpGet]
         public IActionResult EventOrderSuccess()
         {
             ViewData["OrderNo"] = TempData["OrderNo"];
             ViewData["EventTypeId"] = TempData["EventTypeId"];
-            ViewData["OrderId"] = TempData["OrderId"];  
+            ViewData["OrderId"] = TempData["OrderId"];
 
             return View();
         }

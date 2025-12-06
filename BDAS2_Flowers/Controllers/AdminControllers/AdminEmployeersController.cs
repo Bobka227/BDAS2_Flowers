@@ -7,13 +7,26 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu zaměstnanců.
+/// Umožňuje zobrazit seznam, vytvářet, editovat, mazat zaměstnance a pracovat se stromovou strukturou řízení.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/employeers")]
 public class AdminEmployeersController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminEmployeersController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminEmployeersController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech zaměstnanců včetně informací o jejich pozici, obchodu, nadřízeném a souhrnném platu týmu.
+    /// </summary>
+    /// <returns>View s kolekcí <see cref="AdminEmployeeRowVm"/>.</returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -47,7 +60,10 @@ public class AdminEmployeersController : Controller
         return View("/Views/AdminPanel/Employeers/Index.cshtml", rows);
     }
 
-
+    /// <summary>
+    /// Zobrazí formulář pro vytvoření nového zaměstnance.
+    /// </summary>
+    /// <returns>View s editačním modelem <see cref="AdminEmployeeEditVm"/> a naplněnými číselníky.</returns>
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
@@ -56,6 +72,14 @@ public class AdminEmployeersController : Controller
         return View("/Views/AdminPanel/Employeers/Edit.cshtml", vm);
     }
 
+    /// <summary>
+    /// Vytvoří nového zaměstnance pomocí uložené procedury <c>PRC_EMPLOYEER_CREATE</c>.
+    /// </summary>
+    /// <param name="vm">Model obsahující údaje o zaměstnanci k vytvoření.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam zaměstnanců,
+    /// při chybné validaci opět zobrazí formulář s chybami.
+    /// </returns>
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AdminEmployeeEditVm vm)
@@ -89,6 +113,14 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Zobrazí formulář pro úpravu existujícího zaměstnance.
+    /// </summary>
+    /// <param name="id">Identifikátor upravovaného zaměstnance.</param>
+    /// <returns>
+    /// View s vyplněným modelem <see cref="AdminEmployeeEditVm"/>,
+    /// nebo <see cref="NotFoundResult"/>, pokud zaměstnanec neexistuje.
+    /// </returns>
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -115,21 +147,29 @@ public class AdminEmployeersController : Controller
             if (!await r.ReadAsync())
                 return NotFound();
 
-            vm.Id = DbRead.GetInt32(r, 0);      
-            vm.FirstName = r.GetString(1);           
-            vm.LastName = r.GetString(2);            
-            vm.EmploymentDate = r.GetDateTime(3);          
-            vm.Salary = (decimal)r.GetDecimal(4);  
-            vm.ShopId = DbRead.GetInt32(r, 5);     
+            vm.Id = DbRead.GetInt32(r, 0);
+            vm.FirstName = r.GetString(1);
+            vm.LastName = r.GetString(2);
+            vm.EmploymentDate = r.GetDateTime(3);
+            vm.Salary = (decimal)r.GetDecimal(4);
+            vm.ShopId = DbRead.GetInt32(r, 5);
             vm.ManagerId = r.IsDBNull(6) ? (int?)null : DbRead.GetInt32(r, 6);
-            vm.PositionId = r.IsDBNull(7) ? (int?)null : DbRead.GetInt32(r, 7); 
+            vm.PositionId = r.IsDBNull(7) ? (int?)null : DbRead.GetInt32(r, 7);
         }
 
         await FillLookupsAsync(vm);
         return View("/Views/AdminPanel/Employeers/Edit.cshtml", vm);
     }
 
-
+    /// <summary>
+    /// Uloží změny existujícího zaměstnance pomocí uložené procedury <c>PRC_EMPLOYEER_UPDATE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor zaměstnance z URL.</param>
+    /// <param name="vm">Model s upravenými údaji zaměstnance.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam zaměstnanců,
+    /// při chybné validaci opět zobrazí formulář s chybami.
+    /// </returns>
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, AdminEmployeeEditVm vm)
@@ -167,7 +207,11 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    /// <summary>
+    /// Smaže zaměstnance pomocí uložené procedury <c>PRC_EMPLOYEER_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáného zaměstnance.</param>
+    /// <returns>Přesměrování zpět na seznam zaměstnanců s výslednou zprávou.</returns>
     [HttpPost("delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
@@ -193,7 +237,12 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    /// <summary>
+    /// Zobrazí strom organizační struktury zaměstnanců (nadřízený–podřízený).
+    /// </summary>
+    /// <returns>
+    /// View s kolekcí <see cref="AdminEmployeeTreeRowVm"/> a pomocným seznamem zaměstnanců v <c>ViewBag.Employees</c>.
+    /// </returns>
     [HttpGet("tree")]
     public async Task<IActionResult> Tree()
     {
@@ -249,12 +298,20 @@ public class AdminEmployeersController : Controller
             }
         }
 
-
         ViewBag.Employees = employees;
 
         return View("/Views/AdminPanel/Employeers/Tree.cshtml", rows);
     }
 
+    /// <summary>
+    /// Přesune celý podstrom zaměstnance pod nového nadřízeného
+    /// pomocí uložené procedury <c>ST72861.PRC_EMP_MOVE_SUBTREE</c>.
+    /// </summary>
+    /// <param name="empId">Identifikátor zaměstnance, jehož podstrom se přesouvá.</param>
+    /// <param name="newManagerId">Identifikátor nového nadřízeného.</param>
+    /// <returns>
+    /// Přesměrování zpět na stránku se stromem s informační zprávou o výsledku operace.
+    /// </returns>
     [HttpPost("move-subtree")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MoveSubtree(int empId, int newManagerId)
@@ -284,9 +341,11 @@ public class AdminEmployeersController : Controller
         return RedirectToAction(nameof(Tree));
     }
 
-
-
-
+    /// <summary>
+    /// Naplní view model <see cref="AdminEmployeeEditVm"/> potřebnými číselníky
+    /// (obchody, pozice, potenciální nadřízení) a uloží je do <c>ViewBag</c>.
+    /// </summary>
+    /// <param name="vm">Model zaměstnance, pro kterého se lookup hodnoty načítají.</param>
     private async Task FillLookupsAsync(AdminEmployeeEditVm vm)
     {
         await using var conn = await _db.CreateOpenAsync();
@@ -320,7 +379,7 @@ public class AdminEmployeersController : Controller
             while (await r.ReadAsync())
             {
                 var id = DbRead.GetInt32(r, 0);
-                if (vm.Id.HasValue && vm.Id.Value == id) 
+                if (vm.Id.HasValue && vm.Id.Value == id)
                     continue;
                 managers.Add((id, r.GetString(1)));
             }

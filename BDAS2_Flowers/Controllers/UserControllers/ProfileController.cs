@@ -1,31 +1,46 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Oracle.ManagedDataAccess.Client;
+﻿using System.Data;
+using System.Security.Claims;
+using BDAS2_Flowers.Data;
 using BDAS2_Flowers.Models.ViewModels;
+using BDAS2_Flowers.Models.ViewModels.UserProfileModels;
 using BDAS2_Flowers.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using BDAS2_Flowers.Data;
-using BDAS2_Flowers.Models.ViewModels.UserProfileModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.UserControllers
 {
+    /// <summary>
+    /// Řadič pro práci s uživatelským profilem – přehled objednávek a adres,
+    /// změna e-mailu, hesla a nahrání avataru.
+    /// </summary>
     [Authorize]
     public class ProfileController : Controller
     {
         private readonly IDbFactory _db;
         private readonly IPasswordHasher _hasher;
 
+        /// <summary>
+        /// Vytvoří instanci řadiče profilu se službami pro DB a hashování hesel.
+        /// </summary>
         public ProfileController(IDbFactory db, IPasswordHasher hasher)
         {
             _db = db;
             _hasher = hasher;
         }
 
+        /// <summary>
+        /// Interní ID aktuálně přihlášeného uživatele (ClaimTypes.NameIdentifier),
+        /// nebo 0 pokud není k dispozici.
+        /// </summary>
         private int CurrentUserId =>
             int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
+        /// <summary>
+        /// Zobrazí stránku profilu – základní údaje, seznam objednávek a adres.
+        /// </summary>
         [HttpGet("/profile")]
         public async Task<IActionResult> Index()
         {
@@ -39,6 +54,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             await using var con = await _db.CreateOpenAsync();
 
+            // Objednávky uživatele
             const string sqlOrders = @"
                 SELECT ORDERID, ORDER_NO, ORDERDATE, STATUS, DELIVERY, SHOP, TOTAL
                 FROM VW_USER_ORDERS_EX
@@ -66,6 +82,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
                 }
             }
 
+            // Adresy uživatele
             const string sqlAddr = @"
                 SELECT ADDRESSID, STREET, HOUSENUMBER, POSTALCODE, LAST_USED, USED_COUNT
                 FROM VW_USER_ADDRESSES
@@ -93,6 +110,10 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             return View(vm);
         }
 
+        /// <summary>
+        /// Změna e-mailu – ověří heslo a zavolá proceduru <c>PRC_USER_CHANGE_EMAIL</c>.
+        /// Aktualizuje také claim s e-mailem v cookie.
+        /// </summary>
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/change-email")]
         public async Task<IActionResult> ChangeEmail(ChangeEmailVm vm)
@@ -105,6 +126,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             await using var con = await _db.CreateOpenAsync();
 
+            // Načtení hashovaného hesla z DB
             string? dbHash;
             await using (var cmd = new OracleCommand(
                 @"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
@@ -121,9 +143,10 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             try
             {
+                // Změna e-mailu v DB
                 await using (var cmd = new OracleCommand("ST72861.PRC_USER_CHANGE_EMAIL", con)
                 {
-                    CommandType = System.Data.CommandType.StoredProcedure,
+                    CommandType = CommandType.StoredProcedure,
                     BindByName = true
                 })
                 {
@@ -135,6 +158,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
+                // Aktualizace claimu s e-mailem
                 var claims = User.Claims.ToList();
                 var old = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
                 if (old != null) claims.Remove(old);
@@ -161,7 +185,10 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             }
         }
 
-
+        /// <summary>
+        /// Změna hesla – ověřuje stávající heslo a uloží nový hash
+        /// pomocí procedury <c>PRC_USER_CHANGE_PASSWORD</c>.
+        /// </summary>
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/change-password")]
         public async Task<IActionResult> ChangePassword(ChangePasswordVm vm)
@@ -176,6 +203,7 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             await using var con = await _db.CreateOpenAsync();
 
+            // Načíst současný hash hesla
             string? dbHash;
             await using (var cmd = new OracleCommand(
                 @"SELECT ""PASSWORDHASH"" FROM ""ST72861"".""USER"" WHERE ""USERID"" = :id", con))
@@ -192,9 +220,10 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             var newHash = _hasher.Hash(vm.NewPassword);
 
+            // Uložení nového hash hesla
             await using (var cmd = new OracleCommand("ST72861.PRC_USER_CHANGE_PASSWORD", con)
             {
-                CommandType = System.Data.CommandType.StoredProcedure,
+                CommandType = CommandType.StoredProcedure,
                 BindByName = true
             })
             {
@@ -210,7 +239,10 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             return Redirect("/profile?tab=overview");
         }
 
-
+        /// <summary>
+        /// Nahrání a uložení avataru uživatele – kontrola velikosti a typu souboru
+        /// a volání procedury <c>PR_SET_AVATAR</c>.
+        /// </summary>
         [ValidateAntiForgeryToken]
         [HttpPost("/profile/avatar")]
         [RequestSizeLimit(10 * 1024 * 1024)]
@@ -218,16 +250,19 @@ namespace BDAS2_Flowers.Controllers.UserControllers
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             const long MaxBytes = 10 * 1024 * 1024;
+
             if (file is null || file.Length == 0)
             {
                 TempData["ProfileError"] = "Vyberte prosím soubor.";
                 return Redirect("/profile?tab=overview");
             }
+
             if (file.Length > MaxBytes)
             {
                 TempData["ProfileError"] = "Maximální velikost avataru je 10 MB.";
                 return Redirect("/profile?tab=overview");
             }
+
             var allowed = new[] { "image/png", "image/jpeg", "image/gif", "image/webp" };
             if (!allowed.Contains(file.ContentType))
             {
@@ -247,13 +282,16 @@ namespace BDAS2_Flowers.Controllers.UserControllers
             await using var con = await _db.CreateOpenAsync();
 
             await using var cmd = new OracleCommand("ST72861.PR_SET_AVATAR", con)
-            { CommandType = System.Data.CommandType.StoredProcedure };
+            {
+                CommandType = CommandType.StoredProcedure,
+                BindByName = true
+            };
             cmd.Parameters.Add("p_userid", OracleDbType.Int32).Value = CurrentUserId;
             cmd.Parameters.Add("p_name", OracleDbType.Varchar2, 200).Value = file.FileName;
             cmd.Parameters.Add("p_ext", OracleDbType.Varchar2, 20).Value = ext;
             cmd.Parameters.Add("p_blob", OracleDbType.Blob).Value = bytes;
             cmd.Parameters.Add("p_actor", OracleDbType.Varchar2, 50).Value = User.Identity?.Name ?? "system";
-            cmd.Parameters.Add("o_avatarid", OracleDbType.Int32).Direction = System.Data.ParameterDirection.Output;
+            cmd.Parameters.Add("o_avatarid", OracleDbType.Int32).Direction = ParameterDirection.Output;
 
             await cmd.ExecuteNonQueryAsync();
 

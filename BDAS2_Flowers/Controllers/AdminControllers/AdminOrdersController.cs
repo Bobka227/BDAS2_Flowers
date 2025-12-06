@@ -9,13 +9,32 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro práci s objednávkami.
+/// Umožňuje objednávky filtrovat, zobrazit detail a mazat je.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/orders")]
 public class AdminOrdersController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminOrdersController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminOrdersController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam objednávek s možností filtrování podle čísla objednávky, zákazníka a stavu.
+    /// </summary>
+    /// <param name="q">
+    /// Volitelný textový filtr – hledá se v čísle objednávky (<c>ORDER_NO</c>) a jménu zákazníka.
+    /// </param>
+    /// <param name="status">
+    /// Volitelný filtr podle textové hodnoty stavu objednávky.
+    /// </param>
+    /// <returns>View s kolekcí <see cref="AdminOrderRowVm"/> pro administrátorský přehled objednávek.</returns>
     // GET /admin/orders
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q = null, string? status = null)
@@ -56,6 +75,11 @@ public class AdminOrdersController : Controller
         return View("/Views/AdminPanel/Orders/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Smaže objednávku s daným veřejným číslem pomocí uložené procedury <c>ST72861.PRC_ADMIN_ORDER_DELETE</c>.
+    /// </summary>
+    /// <param name="orderNo">Veřejné číslo objednávky (<c>ORDER_NO</c>), která má být odstraněna.</param>
+    /// <returns>Přesměrování zpět na seznam objednávek s informační zprávou.</returns>
     [HttpPost("{orderNo}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string orderNo)
@@ -65,7 +89,7 @@ public class AdminOrdersController : Controller
 
         cmd.CommandType = CommandType.StoredProcedure;
         cmd.BindByName = true;
-        cmd.CommandText = "ST72861.PRC_ADMIN_ORDER_DELETE"; 
+        cmd.CommandText = "ST72861.PRC_ADMIN_ORDER_DELETE";
 
         cmd.Parameters.Add("p_order_no", OracleDbType.Varchar2, 50).Value = orderNo;
 
@@ -82,7 +106,14 @@ public class AdminOrdersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
+    /// <summary>
+    /// Zobrazí detail konkrétní objednávky včetně položek.
+    /// </summary>
+    /// <param name="orderNo">Veřejné číslo objednávky (<c>ORDER_NO</c>), která má být zobrazena.</param>
+    /// <returns>
+    /// View s modelem <see cref="OrderDetailsVm"/> obsahujícím hlavičku i položky objednávky,
+    /// nebo <see cref="NotFoundResult"/>, pokud objednávka neexistuje.
+    /// </returns>
     // GET /admin/orders/{orderNo}
     [HttpGet("{orderNo}")]
     public async Task<IActionResult> Details(string orderNo)
@@ -91,6 +122,7 @@ public class AdminOrdersController : Controller
 
         await using var con = await _db.CreateOpenAsync();
 
+        // Hlavička objednávky
         await using (var head = con.CreateCommand())
         {
             head.BindByName = true;
@@ -113,6 +145,7 @@ public class AdminOrdersController : Controller
             vm.Total = (decimal)hr.GetDecimal(7);
         }
 
+        // Položky objednávky
         await using (var items = con.CreateCommand())
         {
             items.BindByName = true;

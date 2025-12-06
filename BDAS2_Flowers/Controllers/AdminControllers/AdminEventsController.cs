@@ -8,13 +8,26 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers
 {
+    /// <summary>
+    /// Administrátorský controller pro práci s událostmi souvisejícími s objednávkami.
+    /// Umožňuje zobrazit seznam událostí a jejich přehled v kalendáři.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     [Route("admin/events")]
     public class AdminEventsController : Controller
     {
         private readonly IDbFactory _db;
+
+        /// <summary>
+        /// Inicializuje novou instanci <see cref="AdminEventsController"/> s továrnou databázových připojení.
+        /// </summary>
+        /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
         public AdminEventsController(IDbFactory db) => _db = db;
 
+        /// <summary>
+        /// Zobrazí seznam všech událostí v systému včetně souvisejících údajů o objednávce.
+        /// </summary>
+        /// <returns>View s kolekcí <see cref="AdminEventRowVm"/> reprezentující jednotlivé události.</returns>
         [HttpGet("")]
         public async Task<IActionResult> Index()
         {
@@ -58,6 +71,15 @@ namespace BDAS2_Flowers.Controllers.AdminControllers
             return View("/Views/AdminPanel/Events/Index.cshtml", rows);
         }
 
+        /// <summary>
+        /// Zobrazí události pro daný měsíc v podobě kalendáře.
+        /// </summary>
+        /// <param name="year">Rok, pro který se má kalendář zobrazit. Pokud není zadán, použije se aktuální rok.</param>
+        /// <param name="month">Měsíc (1–12), pro který se má kalendář zobrazit. Pokud není zadán, použije se aktuální měsíc.</param>
+        /// <returns>
+        /// View s modelem <see cref="AdminCalendarVm"/>, který obsahuje události v daném měsíci
+        /// a metadata pro vykreslení kalendáře.
+        /// </returns>
         [HttpGet("calendar")]
         public async Task<IActionResult> Calendar(int? year, int? month)
         {

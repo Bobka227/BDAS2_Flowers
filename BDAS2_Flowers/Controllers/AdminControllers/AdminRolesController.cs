@@ -6,13 +6,29 @@ using System.Data;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu aplikačních rolí.
+/// Umožňuje role filtrovat, vytvářet, přejmenovávat a mazat pomocí uložených procedur.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/roles")]
 public class AdminRolesController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminRolesController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminRolesController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam rolí s možností filtrování podle názvu.
+    /// </summary>
+    /// <param name="q">Volitelný textový filtr – část názvu role.</param>
+    /// <returns>
+    /// View s kolekcí řádků (Id, název, počet uživatelů), načtenou z pohledu <c>VW_ADMIN_ROLES</c>.
+    /// </returns>
     // GET /admin/roles?q=Admin
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q)
@@ -41,6 +57,13 @@ public class AdminRolesController : Controller
         return View("/Views/AdminPanel/Roles/Index.cshtml", rows);
     }
 
+    /// <summary>
+    /// Vytvoří novou roli pomocí uložené procedury <c>PRC_ROLE_CREATE</c>.
+    /// </summary>
+    /// <param name="name">Název nové role.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam rolí s informační zprávou o úspěchu nebo chybě.
+    /// </returns>
     // POST /admin/roles/create
     [ValidateAntiForgeryToken]
     [HttpPost("create")]
@@ -66,6 +89,14 @@ public class AdminRolesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Přejmenuje existující roli pomocí uložené procedury <c>PRC_ROLE_RENAME</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor přejmenovávané role.</param>
+    /// <param name="name">Nový název role.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam rolí s informační zprávou o úspěchu nebo chybě.
+    /// </returns>
     // POST /admin/roles/{id}/rename
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/rename")]
@@ -93,6 +124,14 @@ public class AdminRolesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže existující roli pomocí uložené procedury <c>PRC_ROLE_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazané role.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam rolí s informační zprávou o úspěchu nebo chybě,
+    /// například pokud je role stále přiřazena uživatelům.
+    /// </returns>
     // POST /admin/roles/{id}/delete
     [ValidateAntiForgeryToken]
     [HttpPost("{id:int}/delete")]

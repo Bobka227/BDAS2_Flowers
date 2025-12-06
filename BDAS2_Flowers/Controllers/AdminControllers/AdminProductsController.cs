@@ -5,13 +5,32 @@ using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
 
+/// <summary>
+/// Administrátorský controller pro správu produktů v katalogu.
+/// Umožňuje produkty filtrovat, doplňovat sklad, vytvářet, upravovat,
+/// archivovat, mazat a pracovat s jejich obrázky.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/products")]
 public class AdminProductsController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminProductsController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminProductsController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam produktů s možností filtrování podle názvu a typu produktu.
+    /// </summary>
+    /// <param name="q">Volitelný textový filtr – část názvu produktu.</param>
+    /// <param name="typeId">Volitelný filtr podle identifikátoru typu produktu.</param>
+    /// <returns>
+    /// View s kolekcí řádků obsahujících základní údaje o produktech
+    /// a seznam typů produktů ve <c>ViewBag.Types</c>.
+    /// </returns>
     [HttpGet("")]
     public async Task<IActionResult> Index(string? q, int? typeId)
     {
@@ -61,7 +80,13 @@ public class AdminProductsController : Controller
         return View(rows);
     }
 
-
+    /// <summary>
+    /// Vrátí částečný view s tabulkou produktů pro AJAX načítání (bez okolního layoutu).
+    /// Filtrace se chová stejně jako v akci <see cref="Index(string?, int?)"/>.
+    /// </summary>
+    /// <param name="q">Volitelný textový filtr – část názvu produktu.</param>
+    /// <param name="typeId">Volitelný filtr podle identifikátoru typu produktu.</param>
+    /// <returns>Partial view <c>_ProductsTable</c> s kolekcí produktů.</returns>
     [HttpGet("list")]
     public async Task<IActionResult> List(string? q, int? typeId)
     {
@@ -103,6 +128,11 @@ public class AdminProductsController : Controller
         return PartialView("_ProductsTable", rows);
     }
 
+    /// <summary>
+    /// Načte seznam typů produktů z pohledu <c>VW_PRODUCT_TYPES</c>.
+    /// </summary>
+    /// <param name="conn">Otevřené databázové připojení.</param>
+    /// <returns>Kolekce dvojic (Id, název typu).</returns>
     private static async Task<IEnumerable<(int Id, string Name)>> LoadTypesAsync(IDbConnection conn)
     {
         var list = new List<(int, string)>();
@@ -113,6 +143,13 @@ public class AdminProductsController : Controller
         return list;
     }
 
+    /// <summary>
+    /// Hromadně upraví skladovou zásobu produktů určitého typu
+    /// pomocí uložené procedury <c>PRC_RESTOCK_PRODUCTS</c>.
+    /// </summary>
+    /// <param name="typeId">Identifikátor typu produktu, jehož produkty se mají doplnit.</param>
+    /// <param name="delta">Hodnota změny (kladná i záporná) skladového množství.</param>
+    /// <returns>Přesměrování zpět na seznam produktů s informační zprávou.</returns>
     [HttpPost("restock")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Restock(int typeId, int delta)
@@ -138,7 +175,7 @@ public class AdminProductsController : Controller
             }
 
             await tx.CommitAsync();
-            TempData["Msg"] = $"Restock OK: {typeName} (Δ={delta})."; 
+            TempData["Msg"] = $"Restock OK: {typeName} (Δ={delta}).";
         }
         catch (OracleException ex)
         {
@@ -148,8 +185,10 @@ public class AdminProductsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
-    // CREATE
+    /// <summary>
+    /// Zobrazí formulář pro vytvoření nového produktu.
+    /// </summary>
+    /// <returns>View s prázdným modelem <see cref="ProductEditVm"/> a naplněnými typy produktů.</returns>
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
@@ -158,6 +197,15 @@ public class AdminProductsController : Controller
         return View(vm);
     }
 
+    /// <summary>
+    /// Vytvoří nový produkt a volitelně k němu nahraje hlavní obrázek.
+    /// </summary>
+    /// <param name="vm">Model s údaji o novém produktu.</param>
+    /// <param name="image">Volitelný obrázek produktu k nahrání.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam produktů,
+    /// při chybě nebo nevalidním modelu znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(ProductEditVm vm, IFormFile? image)
@@ -177,7 +225,7 @@ public class AdminProductsController : Controller
             { CommandType = CommandType.StoredProcedure, BindByName = true })
             {
                 cmd.Parameters.Add("p_user_id", OracleDbType.Int32).Value = DBNull.Value;
-                cmd.Parameters.Add("p_deliverymethodid", OracleDbType.Int32).Value = DBNull.Value; 
+                cmd.Parameters.Add("p_deliverymethodid", OracleDbType.Int32).Value = DBNull.Value;
                 cmd.Parameters.Clear();
                 cmd.Parameters.Add("p_name", OracleDbType.Varchar2).Value = vm.Name;
                 cmd.Parameters.Add("p_price", OracleDbType.Decimal).Value = vm.Price;
@@ -225,8 +273,14 @@ public class AdminProductsController : Controller
         }
     }
 
-
-    // EDIT
+    /// <summary>
+    /// Zobrazí formulář pro úpravu existujícího produktu.
+    /// </summary>
+    /// <param name="id">Identifikátor produktu.</param>
+    /// <returns>
+    /// View s naplněným modelem <see cref="ProductEditVm"/>,
+    /// nebo <see cref="NotFoundResult"/>, pokud produkt neexistuje.
+    /// </returns>
     [HttpGet("{id:int}/edit")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -253,8 +307,16 @@ public class AdminProductsController : Controller
         return View(vm);
     }
 
-
-
+    /// <summary>
+    /// Uloží změny existujícího produktu a volitelně aktualizuje jeho obrázek.
+    /// </summary>
+    /// <param name="id">Identifikátor produktu z URL.</param>
+    /// <param name="vm">Model s upravenými údaji produktu.</param>
+    /// <param name="image">Volitelný nový obrázek produktu.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam produktů,
+    /// při chybě nebo nevalidním modelu znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("{id:int}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, ProductEditVm vm, IFormFile? image)
@@ -317,7 +379,11 @@ public class AdminProductsController : Controller
         }
     }
 
-
+    /// <summary>
+    /// Archivuje (skryje) produkt z katalogu pomocí uložené procedury <c>PRC_PRODUCT_HIDE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor produktu.</param>
+    /// <returns>Přesměrování zpět na seznam produktů s informační zprávou.</returns>
     [HttpPost("{id:int}/archive")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(int id)
@@ -341,6 +407,11 @@ public class AdminProductsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Obnoví (odarchivuje) produkt v katalogu pomocí uložené procedury <c>PRC_PRODUCT_UNHIDE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor produktu.</param>
+    /// <returns>Přesměrování zpět na seznam produktů s informační zprávou.</returns>
     [HttpPost("{id:int}/unarchive")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Unarchive(int id)
@@ -365,8 +436,13 @@ public class AdminProductsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-
-    // DELETE
+    /// <summary>
+    /// Trvale smaže produkt pomocí uložené procedury <c>PRC_PRODUCT_DELETE</c>.
+    /// Pokud je produkt již použit v objednávkách, smaže se neprovede
+    /// a zobrazí se informace o nutnosti produkt pouze archivovat.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáného produktu.</param>
+    /// <returns>Přesměrování zpět na seznam produktů.</returns>
     [HttpPost("{id:int}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
@@ -392,6 +468,15 @@ public class AdminProductsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže konkrétní obrázek produktu pomocí uložené procedury <c>PRC_DELETE_PRODUCT_PICTURE</c>.
+    /// </summary>
+    /// <param name="productId">Identifikátor produktu, ke kterému obrázek patří.</param>
+    /// <param name="picId">Identifikátor mazáného obrázku.</param>
+    /// <returns>
+    /// Přesměrování zpět na editační stránku produktu
+    /// s informační zprávou o výsledku operace.
+    /// </returns>
     [HttpPost("{productId:int}/picture/{picId:int}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeletePicture(int productId, int picId)

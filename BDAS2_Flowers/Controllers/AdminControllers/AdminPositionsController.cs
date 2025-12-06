@@ -7,13 +7,26 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
+/// <summary>
+/// Administrátorský controller pro správu pracovních pozic.
+/// Umožňuje pozice vypisovat, vytvářet, upravovat a mazat.
+/// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/positions")]
 public class AdminPositionsController : Controller
 {
     private readonly IDbFactory _db;
+
+    /// <summary>
+    /// Inicializuje novou instanci <see cref="AdminPositionsController"/> s továrnou databázových připojení.
+    /// </summary>
+    /// <param name="db">Továrna pro vytváření a otevírání databázových připojení.</param>
     public AdminPositionsController(IDbFactory db) => _db = db;
 
+    /// <summary>
+    /// Zobrazí seznam všech pracovních pozic včetně počtu zaměstnanců na jednotlivých pozicích.
+    /// </summary>
+    /// <returns>View s kolekcí <see cref="AdminPositionRowVm"/>.</returns>
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -42,7 +55,10 @@ public class AdminPositionsController : Controller
         return View("/Views/AdminPanel/Positions/Index.cshtml", rows);
     }
 
-
+    /// <summary>
+    /// Zobrazí formulář pro vytvoření nové pracovní pozice.
+    /// </summary>
+    /// <returns>View s prázdným modelem <see cref="AdminPositionEditVm"/>.</returns>
     [HttpGet("create")]
     public IActionResult Create()
     {
@@ -53,7 +69,14 @@ public class AdminPositionsController : Controller
         return View("/Views/AdminPanel/Positions/Edit.cshtml", vm);
     }
 
-
+    /// <summary>
+    /// Vytvoří novou pracovní pozici pomocí uložené procedury <c>PRC_POSITION_CREATE</c>.
+    /// </summary>
+    /// <param name="vm">Model s údaji nové pozice.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam pozic,
+    /// při chybné validaci znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AdminPositionEditVm vm)
@@ -74,6 +97,14 @@ public class AdminPositionsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Zobrazí formulář pro úpravu existující pracovní pozice.
+    /// </summary>
+    /// <param name="id">Identifikátor upravované pozice.</param>
+    /// <returns>
+    /// View s naplněným modelem <see cref="AdminPositionEditVm"/>,
+    /// nebo <see cref="NotFoundResult"/>, pokud pozice neexistuje.
+    /// </returns>
     [HttpGet("edit/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
@@ -104,6 +135,15 @@ public class AdminPositionsController : Controller
         return View("/Views/AdminPanel/Positions/Edit.cshtml", vm);
     }
 
+    /// <summary>
+    /// Uloží změny existující pracovní pozice pomocí uložené procedury <c>PRC_POSITION_UPDATE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor pozice z URL.</param>
+    /// <param name="vm">Model s upravenými údaji pozice.</param>
+    /// <returns>
+    /// Při úspěchu přesměruje na seznam pozic,
+    /// při chybné validaci znovu zobrazí editační formulář.
+    /// </returns>
     [HttpPost("edit/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, AdminPositionEditVm vm)
@@ -129,6 +169,14 @@ public class AdminPositionsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Smaže pracovní pozici pomocí uložené procedury <c>PRC_POSITION_DELETE</c>.
+    /// </summary>
+    /// <param name="id">Identifikátor mazáné pozice.</param>
+    /// <returns>
+    /// Přesměrování zpět na seznam pozic s informační zprávou
+    /// o úspěchu nebo chybě operace.
+    /// </returns>
     [HttpPost("delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
