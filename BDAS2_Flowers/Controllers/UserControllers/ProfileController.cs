@@ -54,6 +54,24 @@ namespace BDAS2_Flowers.Controllers.UserControllers
 
             await using var con = await _db.CreateOpenAsync();
 
+            await using (var cmdSeg = new OracleCommand(
+                "BEGIN :p_result := ST72861.FN_USER_SEGMENT(:p_user_id); END;",
+                con))
+            {
+                cmdSeg.BindByName = true;
+
+                cmdSeg.Parameters.Add("p_result", OracleDbType.Varchar2, 50)
+                                 .Direction = ParameterDirection.Output;
+
+                cmdSeg.Parameters.Add("p_user_id", OracleDbType.Int32)
+                                 .Value = vm.UserId;
+
+                await cmdSeg.ExecuteNonQueryAsync();
+
+                var seg = cmdSeg.Parameters["p_result"].Value;
+                vm.Segment = seg == null || seg is DBNull ? "NEW" : seg.ToString()!;
+            }
+
             // Objednávky uživatele
             const string sqlOrders = @"
                 SELECT ORDERID, ORDER_NO, ORDERDATE, STATUS, DELIVERY, SHOP, TOTAL
