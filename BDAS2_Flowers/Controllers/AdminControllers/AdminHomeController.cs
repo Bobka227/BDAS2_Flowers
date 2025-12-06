@@ -1,9 +1,10 @@
 ﻿using BDAS2_Flowers.Data;
+using BDAS2_Flowers.Models.ViewModels.AdminModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
-using BDAS2_Flowers.Models.ViewModels.AdminModels;
+using System.Text;
 
 namespace BDAS2_Flowers.Controllers.AdminControllers;
 
@@ -165,4 +166,75 @@ public class AdminHomeController : Controller
             Total = total
         };
     }
+
+    /// <summary>
+    /// Export všech logů z pohledu VW_LOGS_ADMIN do CSV souboru ke stažení.
+    /// </summary>
+    [HttpGet("logs/export")]
+    public async Task<IActionResult> ExportLogsCsv()
+    {
+        await using var con = await _db.CreateOpenAsync();
+        await using var cmd = con.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT LOGID,
+                   OPERATIONNAME,
+                   TABLENAME,
+                   MODIFICATIONDATE,
+                   MODIFICATIONBY,
+                   OLDVALUES,
+                   NEWVALUES
+              FROM VW_LOGS_ADMIN
+             ORDER BY MODIFICATIONDATE DESC, LOGID DESC";
+
+        await using var r = await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
+
+        var sb = new StringBuilder();
+
+        const string sep = ";"; 
+        static void AppendCsvField(StringBuilder b, string? value)
+        {
+            var s = value ?? string.Empty;
+            s = s.Replace("\"", "\"\"");
+            b.Append('"').Append(s).Append('"');
+        }
+
+        sb.AppendLine(string.Join(sep, new[]
+        {
+            "LOGID",
+            "OPERATIONNAME",
+            "TABLENAME",
+            "MODIFICATIONDATE",
+            "MODIFICATIONBY",
+            "OLDVALUES",
+            "NEWVALUES"
+        }));
+
+        while (await r.ReadAsync())
+        {
+            var logId = r.GetInt64(0).ToString();
+            var opName = r.GetString(1);
+            var tableName = r.GetString(2);
+            var modDate = r.GetDateTime(3).ToString("yyyy-MM-dd HH:mm:ss");
+            var modBy = r.GetString(4);
+            var oldVals = r.IsDBNull(5) ? "" : r.GetString(5);
+            var newVals = r.IsDBNull(6) ? "" : r.GetString(6);
+
+            AppendCsvField(sb, logId); sb.Append(sep);
+            AppendCsvField(sb, opName); sb.Append(sep);
+            AppendCsvField(sb, tableName); sb.Append(sep);
+            AppendCsvField(sb, modDate); sb.Append(sep);
+            AppendCsvField(sb, modBy); sb.Append(sep);
+            AppendCsvField(sb, oldVals); sb.Append(sep);
+            AppendCsvField(sb, newVals);
+            sb.AppendLine();
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        var fileName = $"logs_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+
+        return File(bytes, "text/csv; charset=utf-8", fileName);
+    }
+
+
 }
